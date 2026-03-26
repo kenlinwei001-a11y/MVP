@@ -1,13 +1,260 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "@blueprintjs/core/lib/css/blueprint.css";
+@import "@blueprintjs/icons/lib/css/blueprint-icons.css";
+
+/* Palantir Foundry/Gotham Style - High Density Industrial UI */
+
+:root {
+  /* Core Palette */
+  --palantir-bg-page: #F5F8FA;
+  --palantir-bg-panel: #FFFFFF;
+  --palantir-border: #E1E8ED;
+  --palantir-border-light: #D8E1E8;
+  --palantir-border-dark: #C2D1D9;
+  --palantir-primary: #106BA3;
+  --palantir-primary-light: rgba(16, 107, 163, 0.2);
+  --palantir-text-primary: #182026;
+  --palantir-text-secondary: #5C7080;
+  --palantir-text-muted: #8A9BA8;
+  --palantir-success: #0F9960;
+  --palantir-warning: #F29D49;
+  --palantir-danger: #DB3737;
+  --palantir-shadow: 0 2px 4px rgba(16, 22, 26, 0.1);
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+body {
+  margin: 0;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--palantir-bg-page);
+  color: var(--palantir-text-primary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Blueprint Overrides for Palantir Style */
+.bp5-card {
+  background: var(--palantir-bg-panel);
+  border: 1px solid var(--palantir-border);
+  border-radius: 2px;
+  box-shadow: var(--palantir-shadow);
+}
+
+.bp5-button {
+  border-radius: 2px;
+  font-size: 12px;
+  min-height: 28px;
+  padding: 4px 12px;
+}
+
+.bp5-input {
+  border-radius: 2px;
+  border: 1px solid var(--palantir-border-dark);
+  font-size: 12px;
+  padding: 6px 8px;
+  height: 28px;
+}
+
+.bp5-input:focus {
+  outline: 2px solid var(--palantir-primary-light);
+  border-color: var(--palantir-primary);
+}
+
+.bp5-tree-node-content {
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.bp5-tab {
+  font-size: 12px;
+  padding: 8px 12px;
+  color: var(--palantir-text-secondary);
+}
+
+.bp5-tab.bp5-selected {
+  color: var(--palantir-primary);
+  box-shadow: inset 0 -2px 0 var(--palantir-primary);
+}
+
+.bp5-form-group {
+  margin-bottom: 12px;
+}
+
+.bp5-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--palantir-text-secondary);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--palantir-border-dark);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--palantir-text-muted);
+}
+
+/* Industrial Panel Styling */
+.industrial-panel {
+  background: var(--palantir-bg-panel);
+  border: 1px solid var(--palantir-border);
+  border-radius: 2px;
+}
+
+.industrial-panel-header {
+  background: #F8F9FA;
+  border-bottom: 1px solid var(--palantir-border);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--palantir-text-primary);
+}
+
+/* Node Styling for React Flow */
+.ontology-node {
+  width: 220px;
+  background: var(--palantir-bg-panel);
+  border: 1px solid var(--palantir-border-light);
+  border-radius: 2px;
+  box-shadow: var(--palantir-shadow);
+  border-left: 3px solid var(--palantir-primary);
+  font-family: "Inter", sans-serif;
+}
+
+.ontology-node-header {
+  background: #F8F9FA;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--palantir-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ontology-node-content {
+  padding: 10px 12px;
+}
+
+.ontology-node-content .property-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--palantir-border);
+}
+
+.ontology-node-content .property-row:last-child {
+  border-bottom: none;
+}
+
+.property-key {
+  font-size: 11px;
+  color: var(--palantir-text-secondary);
+}
+
+.property-value {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--palantir-text-primary);
+}
+
+/* Status Indicators */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-verified {
+  background: var(--palantir-success);
+}
+
+.status-draft {
+  background: var(--palantir-warning);
+}
+
+.status-conflict {
+  background: var(--palantir-danger);
+}
+
+/* Edge Labels */
+.edge-label {
+  background: var(--palantir-bg-panel);
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-size: 10px;
+  color: var(--palantir-text-secondary);
+  border: 1px solid var(--palantir-border);
+}
+
+/* React Flow Customization */
+.react-flow__node {
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.react-flow__edge path {
+  stroke: #A7B6C2;
+  stroke-width: 1.5px;
+}
+
+.react-flow__edge.selected path {
+  stroke: var(--palantir-primary);
+}
+
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  background: var(--palantir-primary);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  z-index: 10;
+}
+
+.react-flow__handle:hover {
+  background: var(--palantir-primary);
+  transform: scale(1.2);
+}
+
+/* Ensure handles are visible on the node edges */
+.react-flow__node .react-flow__handle-left {
+  left: -5px;
+}
+
+.react-flow__node .react-flow__handle-right {
+  right: -5px;
+}
+
+.react-flow__controls {
+  box-shadow: var(--palantir-shadow);
+  border: 1px solid var(--palantir-border);
+  border-radius: 2px;
+}
+
+.react-flow__controls-button {
+  border-bottom: 1px solid var(--palantir-border);
+  background: var(--palantir-bg-panel);
+}
+
+.react-flow__controls-button:hover {
+  background: #F8F9FA;
 }
