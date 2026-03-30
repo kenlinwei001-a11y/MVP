@@ -1964,7 +1964,11 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
         </div>
 
         {/* Center: Graph Canvas */}
-        <div style={{ flex: 1, position: 'relative' }}>
+        <div style={{
+          flex: 1,
+          position: 'relative',
+          minWidth: 0, // 防止flex item溢出
+        }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -1975,8 +1979,10 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
             onEdgeClick={onEdgeClick}
             nodeTypes={nodeTypes}
             fitView
+            fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}
             snapToGrid
             snapGrid={[15, 15]}
+            style={{ width: '100%', height: '100%' }}
           >
             <Background color="#E1E8ED" gap={20} size={1} />
             <Controls />
@@ -2003,13 +2009,21 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
           </div>
         </div>
 
-        {/* Right: Inspector Panel */}
+        {/* Right: Inspector Panel - Overlay Style */}
         <div style={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          bottom: 0,
           width: 350,
           background: '#FFFFFF',
           borderLeft: '1px solid var(--palantir-border)',
+          boxShadow: '-4px 0 16px rgba(0, 0, 0, 0.08)',
           display: 'flex',
           flexDirection: 'column',
+          zIndex: 10,
+          transform: selectedEntity || selectedEdgeId ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.3s ease',
         }}>
           {selectedEdgeId ? (
             <EdgeInspector
@@ -2025,19 +2039,36 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                 padding: '12px 16px',
                 borderBottom: '1px solid var(--palantir-border)',
                 background: '#F8F9FA',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
               }}>
-                <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 4 }}>
-                  {selectedEntity.type === 'Object_Type' ? '对象类型' :
-                   selectedEntity.type === 'Relation_Type' ? '关系类型' : '属性类型'}
+                <div>
+                  <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                    {selectedEntity.type === 'Object_Type' ? '对象类型' :
+                     selectedEntity.type === 'Relation_Type' ? '关系类型' : '属性类型'}
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>
+                    {selectedEntity.type === 'Object_Type' && `${selectedEntity.displayName}`}
+                    {selectedEntity.type === 'Relation_Type' && `${selectedEntity.displayName}`}
+                    {selectedEntity.type === 'Attribute_Type' && `${selectedEntity.displayName}`}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                    ID: {selectedEntity.id}
+                  </div>
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>
-                  {selectedEntity.type === 'Object_Type' && `${selectedEntity.displayName}`}
-                  {selectedEntity.type === 'Relation_Type' && `${selectedEntity.displayName}`}
-                  {selectedEntity.type === 'Attribute_Type' && `${selectedEntity.displayName}`}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-                  ID: {selectedEntity.id}
-                </div>
+                <button
+                  onClick={() => setSelectedEntity(null)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    color: 'var(--text-tertiary)',
+                  }}
+                >
+                  <X size={18} />
+                </button>
               </div>
 
               <Tabs
