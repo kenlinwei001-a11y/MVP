@@ -1,12 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@import "@blueprintjs/core/lib/css/blueprint.css";
-@import "@blueprintjs/icons/lib/css/blueprint-icons.css";
-
 /**
- * Apple Design System - Strict 3-Color Palette
+ * Apple Design System - Strict 3-Color Implementation
  *
  * Philosophy: Maximum clarity with minimum colors
  * 1. White/Light Gray - Backgrounds
@@ -58,7 +51,7 @@ body {
   letter-spacing: -0.022em;
 }
 
-/* Typography */
+/* Typography - SF Pro Style */
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   color: var(--text-primary);
@@ -66,15 +59,32 @@ h1, h2, h3, h4, h5, h6 {
   margin: 0;
 }
 
-/* Apple Card */
+/* Apple Panel - Main Container */
+.apple-panel {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.apple-panel-header {
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--bg-tertiary);
+}
+
+/* Apple Card - Content Blocks */
 .apple-card {
   background: var(--bg-primary);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--bg-tertiary);
+  transition: box-shadow 0.2s ease;
 }
 
-/* Apple Button */
+.apple-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Apple Button - 3 Variants */
 .apple-btn {
   display: inline-flex;
   align-items: center;
@@ -88,6 +98,10 @@ h1, h2, h3, h4, h5, h6 {
   transition: all 0.15s ease;
   border: none;
   outline: none;
+}
+
+.apple-btn:focus {
+  box-shadow: 0 0 0 3px var(--accent-light);
 }
 
 .apple-btn-primary {
@@ -108,8 +122,18 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--bg-tertiary);
 }
 
+.apple-btn-ghost {
+  background: transparent;
+  color: var(--accent);
+}
+
+.apple-btn-ghost:hover {
+  background: var(--accent-light);
+}
+
 /* Apple Input */
 .apple-input {
+  width: 100%;
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-secondary);
   border: 1px solid transparent;
@@ -124,6 +148,10 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--bg-primary);
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.apple-input::placeholder {
+  color: var(--text-tertiary);
 }
 
 /* Apple Navigation */
@@ -187,7 +215,60 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--accent);
 }
 
-/* Scrollbar */
+/* Apple List */
+.apple-list-item {
+  display: flex;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.apple-list-item:hover {
+  background: var(--bg-secondary);
+}
+
+.apple-list-item.selected {
+  background: var(--accent-light);
+}
+
+/* Apple Divider */
+.apple-divider {
+  height: 1px;
+  background: var(--bg-tertiary);
+  margin: var(--space-md) 0;
+}
+
+/* Apple Empty State */
+.apple-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+/* Apple Toolbar */
+.apple-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--bg-tertiary);
+}
+
+/* Apple Sidebar */
+.apple-sidebar {
+  width: 240px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--bg-tertiary);
+}
+
+/* Scrollbar - Apple Style */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -215,6 +296,10 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0;
 }
 
+.react-flow__node.selected .apple-node {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
 .react-flow__edge path {
   stroke: var(--bg-tertiary);
   stroke-width: 1.5px;
@@ -239,6 +324,11 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid var(--bg-tertiary);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
+}
+
+.bp5-button {
+  border-radius: var(--radius-sm);
+  font-weight: 500;
 }
 
 .bp5-button.bp5-intent-primary {
