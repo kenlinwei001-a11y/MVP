@@ -1010,20 +1010,26 @@ const initialDomains: OntologyDomain[] = [
 ];
 
 const initialLinks: OntologyLink[] = [
-  {
-    id: 'link_001',
-    source: 'cathode_001',
-    target: 'cell_001',
-    relation: 'COMPONENTS_OF',
-    cardinality: 'N:1',
-  },
-  {
-    id: 'link_002',
-    source: 'anode_001',
-    target: 'cell_001',
-    relation: 'COMPONENTS_OF',
-    cardinality: 'N:1',
-  },
+  // 原材料 -> 工序
+  { id: 'link_001', source: 'cathode_active', target: 'mixing_process', relation: 'consumed_by', cardinality: 'N:1' },
+  { id: 'link_002', source: 'anode_graphite', target: 'mixing_process', relation: 'consumed_by', cardinality: 'N:1' },
+  { id: 'link_003', source: 'electrolyte', target: 'electrolyte_filling', relation: 'consumed_by', cardinality: 'N:1' },
+  { id: 'link_004', source: 'separator', target: 'winding_process', relation: 'consumed_by', cardinality: 'N:1' },
+  // 工序流程
+  { id: 'link_005', source: 'mixing_process', target: 'coating_process', relation: 'precedes', cardinality: '1:1' },
+  { id: 'link_006', source: 'coating_process', target: 'calendering_process', relation: 'precedes', cardinality: '1:1' },
+  { id: 'link_007', source: 'calendering_process', target: 'slitting_process', relation: 'precedes', cardinality: '1:1' },
+  { id: 'link_008', source: 'slitting_process', target: 'winding_process', relation: 'precedes', cardinality: '1:1' },
+  { id: 'link_009', source: 'winding_process', target: 'electrolyte_filling', relation: 'precedes', cardinality: '1:1' },
+  { id: 'link_010', source: 'electrolyte_filling', target: 'formation_process', relation: 'precedes', cardinality: '1:1' },
+  { id: 'link_011', source: 'formation_process', target: 'aging_process', relation: 'precedes', cardinality: '1:1' },
+  // 设备 -> 工序
+  { id: 'link_012', source: 'mixing_equipment', target: 'mixing_process', relation: 'assigned_to', cardinality: '1:N' },
+  { id: 'link_013', source: 'coating_machine', target: 'coating_process', relation: 'assigned_to', cardinality: '1:N' },
+  { id: 'link_014', source: 'winding_machine', target: 'winding_process', relation: 'assigned_to', cardinality: '1:N' },
+  // 仓储 -> 原材料
+  { id: 'link_015', source: 'raw_warehouse', target: 'cathode_active', relation: 'contains', cardinality: '1:N' },
+  { id: 'link_016', source: 'raw_warehouse', target: 'anode_graphite', relation: 'contains', cardinality: '1:N' },
 ];
 
 // 约束模板库
