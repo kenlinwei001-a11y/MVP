@@ -1388,13 +1388,13 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
         target: link.target,
         label: link.relation,
         type: 'smoothstep',
-        markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: isSelected ? 'var(--accent)' : 'var(--bg-tertiary)' },
+        markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: isSelected ? 'var(--accent)' : '#86868B' },
         style: {
-          stroke: isSelected ? 'var(--accent)' : 'var(--bg-tertiary)',
+          stroke: isSelected ? 'var(--accent)' : '#86868B',
           strokeWidth: isSelected ? 3 : 1.5,
         },
         labelStyle: { fill: isSelected ? 'var(--accent)' : '#5C7080', fontSize: 10, fontWeight: isSelected ? 600 : 400 },
-        labelBgStyle: { fill: '#FFFFFF', stroke: isSelected ? 'var(--accent)' : 'var(--bg-tertiary)', strokeWidth: isSelected ? 2 : 1, rx: 2 },
+        labelBgStyle: { fill: '#FFFFFF', stroke: isSelected ? 'var(--accent)' : '#86868B', strokeWidth: isSelected ? 2 : 1, rx: 2 },
         labelBgPadding: [4, 6],
       };
     });
@@ -1431,8 +1431,8 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
         setEdges((eds) => addEdge({
           ...connection,
           type: 'smoothstep',
-          markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: 'var(--bg-tertiary)' },
-          style: { stroke: 'var(--bg-tertiary)', strokeWidth: 1.5 },
+          markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: '#86868B' },
+          style: { stroke: '#86868B', strokeWidth: 1.5 },
         }, eds));
       }
     },

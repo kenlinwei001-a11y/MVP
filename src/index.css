@@ -215,14 +215,74 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0;
 }
 
+/* Node Card Styling - High Contrast */
+.ontology-node {
+  background: var(--bg-primary);
+  border: 1.5px solid var(--text-tertiary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  min-width: 180px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ontology-node:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+
+.ontology-node-header {
+  background: var(--bg-secondary);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--bg-tertiary);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.ontology-node-content {
+  padding: 10px 14px;
+}
+
+.property-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--bg-secondary);
+  font-size: 12px;
+}
+
+.property-row:last-child {
+  border-bottom: none;
+}
+
+.property-key {
+  color: var(--text-secondary);
+}
+
+.property-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Edge Styling - High Contrast */
 .react-flow__edge path {
-  stroke: var(--bg-tertiary);
-  stroke-width: 1.5px;
+  stroke: #86868B;
+  stroke-width: 2px;
+}
+
+.react-flow__edge:hover path {
+  stroke: var(--text-secondary);
+  stroke-width: 2.5px;
 }
 
 .react-flow__edge.selected path {
   stroke: var(--accent);
-  stroke-width: 2px;
+  stroke-width: 3px;
 }
 
 .react-flow__handle {
@@ -231,6 +291,11 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--accent);
   border: 2px solid var(--bg-primary);
   border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--text-tertiary);
+}
+
+.react-flow__handle:hover {
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 /* Blueprint Overrides */
