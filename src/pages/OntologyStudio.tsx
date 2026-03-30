@@ -1157,11 +1157,11 @@ const EdgeInspector: React.FC<EdgeInspectorProps> = ({ edgeId, links, setLinks, 
         justifyContent: 'space-between',
       }}>
         <div>
-          <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--palantir-text-muted)', marginBottom: 4 }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 4 }}>
             关系连线
           </div>
           <div style={{ fontSize: 14, fontWeight: 600 }}>{link.relation}</div>
-          <div style={{ fontSize: 11, color: 'var(--palantir-text-secondary)', fontFamily: 'monospace' }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
             ID: {link.id}
           </div>
         </div>
@@ -1171,7 +1171,7 @@ const EdgeInspector: React.FC<EdgeInspectorProps> = ({ edgeId, links, setLinks, 
       <div style={{ padding: 16, overflow: 'auto', flex: 1 }}>
         {/* 源节点和目标节点信息 */}
         <Card style={{ marginBottom: 16, padding: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--palantir-text-secondary)', marginBottom: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 12 }}>
             连接信息
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -1225,7 +1225,7 @@ const EdgeInspector: React.FC<EdgeInspectorProps> = ({ edgeId, links, setLinks, 
 
         {/* 常用关系类型快速选择 */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--palantir-text-secondary)', marginBottom: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
             常用关系
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -1274,7 +1274,7 @@ const OntologyNodeCard: React.FC<{ data: OntologyEntity }> = ({ data }) => {
           transform: 'translateY(-50%)',
           width: 10,
           height: 10,
-          background: '#106BA3',
+          background: 'var(--accent)',
           border: '2px solid #fff',
         }}
       />
@@ -1293,12 +1293,12 @@ const OntologyNodeCard: React.FC<{ data: OntologyEntity }> = ({ data }) => {
             <span className="property-key">{prop.key}</span>
             <span className="property-value">
               {prop.value !== undefined ? prop.value : '—'}
-              {prop.unit && <span style={{ marginLeft: 2, color: 'var(--palantir-text-muted)' }}>{prop.unit}</span>}
+              {prop.unit && <span style={{ marginLeft: 2, color: 'var(--text-tertiary)' }}>{prop.unit}</span>}
             </span>
           </div>
         ))}
         {data.properties.length > 3 && (
-          <div style={{ fontSize: 10, color: 'var(--palantir-text-muted)', textAlign: 'center', paddingTop: 4 }}>
+          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', textAlign: 'center', paddingTop: 4 }}>
             +{data.properties.length - 3} 更多
           </div>
         )}
@@ -1314,7 +1314,7 @@ const OntologyNodeCard: React.FC<{ data: OntologyEntity }> = ({ data }) => {
           transform: 'translateY(-50%)',
           width: 10,
           height: 10,
-          background: '#106BA3',
+          background: 'var(--accent)',
           border: '2px solid #fff',
         }}
       />
@@ -1388,13 +1388,13 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
         target: link.target,
         label: link.relation,
         type: 'smoothstep',
-        markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: isSelected ? '#106BA3' : '#A7B6C2' },
+        markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: isSelected ? 'var(--accent)' : 'var(--bg-tertiary)' },
         style: {
-          stroke: isSelected ? '#106BA3' : '#A7B6C2',
+          stroke: isSelected ? 'var(--accent)' : 'var(--bg-tertiary)',
           strokeWidth: isSelected ? 3 : 1.5,
         },
-        labelStyle: { fill: isSelected ? '#106BA3' : '#5C7080', fontSize: 10, fontWeight: isSelected ? 600 : 400 },
-        labelBgStyle: { fill: '#FFFFFF', stroke: isSelected ? '#106BA3' : '#E1E8ED', strokeWidth: isSelected ? 2 : 1, rx: 2 },
+        labelStyle: { fill: isSelected ? 'var(--accent)' : '#5C7080', fontSize: 10, fontWeight: isSelected ? 600 : 400 },
+        labelBgStyle: { fill: '#FFFFFF', stroke: isSelected ? 'var(--accent)' : 'var(--bg-tertiary)', strokeWidth: isSelected ? 2 : 1, rx: 2 },
         labelBgPadding: [4, 6],
       };
     });
@@ -1431,8 +1431,8 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
         setEdges((eds) => addEdge({
           ...connection,
           type: 'smoothstep',
-          markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: '#A7B6C2' },
-          style: { stroke: '#A7B6C2', strokeWidth: 1.5 },
+          markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: 'var(--bg-tertiary)' },
+          style: { stroke: 'var(--bg-tertiary)', strokeWidth: 1.5 },
         }, eds));
       }
     },
@@ -1782,7 +1782,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
             padding: '4px 8px',
             cursor: 'pointer',
             fontSize: 12,
-            backgroundColor: isSelected ? 'rgba(16, 107, 163, 0.1)' : 'transparent',
+            backgroundColor: isSelected ? 'var(--accent-light)' : 'transparent',
             borderLeft: isSelected ? '3px solid #106BA3' : '3px solid transparent',
           }}
           onClick={() => {
@@ -1810,7 +1810,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                   padding: '4px 8px 4px 32px',
                   cursor: 'pointer',
                   fontSize: 12,
-                  backgroundColor: selectedNodeId === entity.id ? 'rgba(16, 107, 163, 0.1)' : 'transparent',
+                  backgroundColor: selectedNodeId === entity.id ? 'var(--accent-light)' : 'transparent',
                 }}
                 onClick={() => {
                   setSelectedNodeId(entity.id);
@@ -1822,7 +1822,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                 {entity.icon === 'layers' && <Layers size={12} style={{ marginRight: 6 }} />}
                 {entity.icon === 'box' && <Box size={12} style={{ marginRight: 6 }} />}
                 {entity.icon === 'truck' && <Truck size={12} style={{ marginRight: 6 }} />}
-                <span style={{ flex: 1, color: 'var(--palantir-text-secondary)' }}>{entity.displayName}</span>
+                <span style={{ flex: 1, color: 'var(--text-secondary)' }}>{entity.displayName}</span>
                 <StatusDot status={entity.status} />
               </div>
             ))}
@@ -1863,7 +1863,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
           </div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600 }}>本体配置器</div>
-            <div style={{ fontSize: 10, color: 'var(--palantir-text-muted)' }}>锂电行业本体管理系统 v2.1.0</div>
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>锂电行业本体管理系统 v2.1.0</div>
           </div>
         </div>
 
@@ -1901,7 +1901,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
           </div>
 
           <div style={{ padding: 12, borderTop: '1px solid var(--palantir-border)' }}>
-            <div style={{ fontSize: 11, color: 'var(--palantir-text-muted)', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 8 }}>
               当前选中: {selectedDomain?.displayName || '未选择'}
             </div>
             <Button
@@ -1948,7 +1948,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
             borderRadius: 2,
             border: '1px solid var(--palantir-border)',
             fontSize: 11,
-            color: 'var(--palantir-text-secondary)',
+            color: 'var(--text-secondary)',
           }}>
             节点: {nodes.length} | 关系: {edges.length} | 选中: {selectedNodeId || '无'}
           </div>
@@ -1977,7 +1977,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                 borderBottom: '1px solid var(--palantir-border)',
                 background: '#F8F9FA',
               }}>
-                <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--palantir-text-muted)', marginBottom: 4 }}>
+                <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 4 }}>
                   {selectedEntity.type === 'Object_Type' ? '对象类型' :
                    selectedEntity.type === 'Relation_Type' ? '关系类型' : '属性类型'}
                 </div>
@@ -1986,7 +1986,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                   {selectedEntity.type === 'Relation_Type' && `${selectedEntity.displayName}`}
                   {selectedEntity.type === 'Attribute_Type' && `${selectedEntity.displayName}`}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--palantir-text-secondary)', fontFamily: 'monospace' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                   ID: {selectedEntity.id}
                 </div>
               </div>
@@ -2025,7 +2025,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                           </optgroup>
                         ))}
                       </HTMLSelect>
-                      <div style={{ marginTop: 4, fontSize: 10, color: 'var(--palantir-text-muted)' }}>
+                      <div style={{ marginTop: 4, fontSize: 10, color: 'var(--text-tertiary)' }}>
                         {ENTITY_TYPE_OPTIONS.flatMap(g => g.options).find(o => o.value === selectedEntity.type)?.desc}
                       </div>
                     </FormGroup>
@@ -2056,7 +2056,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                     <Divider />
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--palantir-text-secondary)' }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
                         属性 ({selectedEntity.properties.length})
                       </span>
                       <Button small minimal icon={<Plus size={14} />} />
@@ -2070,7 +2070,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                             {ATTRIBUTE_TYPE_OPTIONS.flatMap(g => g.options).find(o => o.value === prop.type)?.label || prop.type}
                           </Tag>
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--palantir-text-secondary)' }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                           {prop.value !== undefined ? prop.value : '—'} {prop.unit}
                         </div>
                       </Card>
@@ -2086,7 +2086,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                         fontSize: 11,
                         fontWeight: 600,
                         textTransform: 'uppercase',
-                        color: 'var(--palantir-text-secondary)',
+                        color: 'var(--text-secondary)',
                         marginBottom: 12,
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -2125,7 +2125,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                                 style={{
                                   padding: 10,
                                   marginBottom: 8,
-                                  border: `1px solid ${isSelected ? '#106BA3' : 'var(--palantir-border)'}`,
+                                  border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--palantir-border)'}`,
                                   borderRadius: 2,
                                   cursor: 'pointer',
                                   background: isSelected ? 'rgba(16, 107, 163, 0.05)' : '#fff',
@@ -2150,7 +2150,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                                 </div>
                                 <div style={{
                                   fontSize: 11,
-                                  color: 'var(--palantir-text-secondary)',
+                                  color: 'var(--text-secondary)',
                                   fontFamily: 'monospace',
                                   whiteSpace: 'nowrap',
                                   overflow: 'hidden',
@@ -2166,7 +2166,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                           <div style={{
                             padding: 20,
                             textAlign: 'center',
-                            color: 'var(--palantir-text-muted)',
+                            color: 'var(--text-tertiary)',
                             fontSize: 12,
                             border: '1px dashed var(--palantir-border)',
                             borderRadius: 2
@@ -2312,7 +2312,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                               borderRadius: 2,
                               fontSize: 11,
                               fontFamily: 'monospace',
-                              color: 'var(--palantir-text-secondary)'
+                              color: 'var(--text-secondary)'
                             }}>
                               当前: {selectedConstraint.expression || '(空)'}
                             </div>
@@ -2326,7 +2326,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                           fontSize: 11,
                           fontWeight: 600,
                           textTransform: 'uppercase',
-                          color: 'var(--palantir-text-secondary)',
+                          color: 'var(--text-secondary)',
                           marginBottom: 8
                         }}>
                           约束模板库
@@ -2347,7 +2347,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                             >
                               <div>
                                 <div style={{ fontSize: 12, fontWeight: 500 }}>{template.name}</div>
-                                <div style={{ fontSize: 10, color: 'var(--palantir-text-muted)' }}>
+                                <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
                                   {template.expression.slice(0, 30)}...
                                 </div>
                               </div>
@@ -2471,7 +2471,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
 
                 <Tab id="perms" title="权限" panel={
                   <div style={{ padding: 16 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--palantir-text-secondary)', marginBottom: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 8 }}>
                       访问控制
                     </div>
                     <Checkbox className="bp5-small" label="仅管理员可编辑" defaultChecked />
@@ -2488,7 +2488,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--palantir-text-muted)',
+              color: 'var(--text-tertiary)',
             }}>
               <Braces size={48} strokeWidth={1} />
               <div style={{ marginTop: 16, fontSize: 12 }}>选择一个实体进行编辑</div>
@@ -2558,11 +2558,11 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
           <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
             {/* 校验结果 */}
             <div style={{ flex: 1, padding: 16, borderRight: '1px solid var(--palantir-border)', overflow: 'auto' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 12, color: 'var(--palantir-text-secondary)' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 12, color: 'var(--text-secondary)' }}>
                 校验结果
               </div>
               {validationResults.length === 0 ? (
-                <div style={{ fontSize: 12, color: 'var(--palantir-text-muted)', textAlign: 'center', padding: 20 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center', padding: 20 }}>
                   点击"验证"或"重新校验"开始检查约束
                 </div>
               ) : (
@@ -2587,7 +2587,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                         {result.severity === 'info' && <Info size={14} color="#2563eb" />}
                         <div>
                           <div style={{ fontSize: 12, color: '#182026' }}>{result.message}</div>
-                          <div style={{ fontSize: 10, color: 'var(--palantir-text-muted)', marginTop: 2 }}>
+                          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
                             类型: {result.type}{result.constraintId && ` | 约束ID: ${result.constraintId}`}
                           </div>
                         </div>
@@ -2601,7 +2601,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
             {/* AST 与求解器映射 */}
             {showASTPanel && generatedAST && (
               <div style={{ flex: 1, padding: 16, borderRight: '1px solid var(--palantir-border)', overflow: 'auto', background: '#fafafa' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 12, color: 'var(--palantir-text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Braces size={14} />
                   DSL AST 语法树
                   <Tag minimal intent="primary" style={{ fontSize: 10 }}>{generatedAST.category}</Tag>
@@ -2620,7 +2620,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                 </pre>
                 {solverMapping && (
                   <>
-                    <div style={{ fontSize: 11, fontWeight: 600, marginTop: 12, marginBottom: 8, color: 'var(--palantir-text-secondary)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, marginTop: 12, marginBottom: 8, color: 'var(--text-secondary)' }}>
                       求解器映射 ({solverMapping.solverType})
                     </div>
                     <div style={{
@@ -2652,7 +2652,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
 
             {/* 推演测试 */}
             <div style={{ flex: 1, padding: 16, overflow: 'auto' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 12, color: 'var(--palantir-text-secondary)' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 12, color: 'var(--text-secondary)' }}>
                 推演测试结果
               </div>
               {isSimulating ? (
@@ -2660,10 +2660,10 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                   <div className="bp3-spinner bp3-small">
                     <div className="bp3-spinner-animation" />
                   </div>
-                  <span style={{ fontSize: 12, color: 'var(--palantir-text-secondary)' }}>正在推演...</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>正在推演...</span>
                 </div>
               ) : constraints.filter(c => c.status === 'active').length === 0 ? (
-                <div style={{ fontSize: 12, color: 'var(--palantir-text-muted)', textAlign: 'center', padding: 20 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center', padding: 20 }}>
                   暂无激活的约束用于推演
                 </div>
               ) : (
