@@ -1010,26 +1010,69 @@ const initialDomains: OntologyDomain[] = [
 ];
 
 const initialLinks: OntologyLink[] = [
-  // 原材料 -> 工序
+  // ==================== 原材料 -> 工序 (consumed_by) ====================
+  // 正极材料 -> 搅拌
   { id: 'link_001', source: 'cathode_active', target: 'mixing_process', relation: 'consumed_by', cardinality: 'N:1' },
-  { id: 'link_002', source: 'anode_graphite', target: 'mixing_process', relation: 'consumed_by', cardinality: 'N:1' },
-  { id: 'link_003', source: 'electrolyte', target: 'electrolyte_filling', relation: 'consumed_by', cardinality: 'N:1' },
-  { id: 'link_004', source: 'separator', target: 'winding_process', relation: 'consumed_by', cardinality: 'N:1' },
-  // 工序流程
-  { id: 'link_005', source: 'mixing_process', target: 'coating_process', relation: 'precedes', cardinality: '1:1' },
-  { id: 'link_006', source: 'coating_process', target: 'calendering_process', relation: 'precedes', cardinality: '1:1' },
-  { id: 'link_007', source: 'calendering_process', target: 'slitting_process', relation: 'precedes', cardinality: '1:1' },
-  { id: 'link_008', source: 'slitting_process', target: 'winding_process', relation: 'precedes', cardinality: '1:1' },
-  { id: 'link_009', source: 'winding_process', target: 'electrolyte_filling', relation: 'precedes', cardinality: '1:1' },
-  { id: 'link_010', source: 'electrolyte_filling', target: 'formation_process', relation: 'precedes', cardinality: '1:1' },
-  { id: 'link_011', source: 'formation_process', target: 'aging_process', relation: 'precedes', cardinality: '1:1' },
-  // 设备 -> 工序
-  { id: 'link_012', source: 'mixing_equipment', target: 'mixing_process', relation: 'assigned_to', cardinality: '1:N' },
-  { id: 'link_013', source: 'coating_machine', target: 'coating_process', relation: 'assigned_to', cardinality: '1:N' },
-  { id: 'link_014', source: 'winding_machine', target: 'winding_process', relation: 'assigned_to', cardinality: '1:N' },
-  // 仓储 -> 原材料
-  { id: 'link_015', source: 'raw_warehouse', target: 'cathode_active', relation: 'contains', cardinality: '1:N' },
-  { id: 'link_016', source: 'raw_warehouse', target: 'anode_graphite', relation: 'contains', cardinality: '1:N' },
+  { id: 'link_002', source: 'conductive_additive', target: 'mixing_process', relation: 'consumed_by', cardinality: 'N:1' },
+  { id: 'link_003', source: 'binder', target: 'mixing_process', relation: 'consumed_by', cardinality: 'N:1' },
+  // 负极材料 -> 搅拌
+  { id: 'link_004', source: 'anode_graphite', target: 'mixing_process', relation: 'consumed_by', cardinality: 'N:1' },
+  // 其他材料 -> 工序
+  { id: 'link_005', source: 'electrolyte', target: 'electrolyte_filling', relation: 'consumed_by', cardinality: 'N:1' },
+  { id: 'link_006', source: 'separator', target: 'winding_process', relation: 'consumed_by', cardinality: 'N:1' },
+  { id: 'link_007', source: 'current_collector', target: 'coating_process', relation: 'consumed_by', cardinality: 'N:1' },
+
+  // ==================== 工序流程 (precedes) ====================
+  { id: 'link_010', source: 'mixing_process', target: 'coating_process', relation: 'precedes', cardinality: '1:1' },
+  { id: 'link_011', source: 'coating_process', target: 'calendering_process', relation: 'precedes', cardinality: '1:1' },
+  { id: 'link_012', source: 'calendering_process', target: 'slitting_process', relation: 'precedes', cardinality: '1:1' },
+  { id: 'link_013', source: 'slitting_process', target: 'winding_process', relation: 'precedes', cardinality: '1:1' },
+  { id: 'link_014', source: 'winding_process', target: 'electrolyte_filling', relation: 'precedes', cardinality: '1:1' },
+  { id: 'link_015', source: 'electrolyte_filling', target: 'formation_process', relation: 'precedes', cardinality: '1:1' },
+  { id: 'link_016', source: 'formation_process', target: 'aging_process', relation: 'precedes', cardinality: '1:1' },
+
+  // ==================== 设备 -> 工序 (assigned_to) ====================
+  { id: 'link_020', source: 'mixing_equipment', target: 'mixing_process', relation: 'assigned_to', cardinality: '1:N' },
+  { id: 'link_021', source: 'coating_machine', target: 'coating_process', relation: 'assigned_to', cardinality: '1:N' },
+  { id: 'link_022', source: 'winding_machine', target: 'winding_process', relation: 'assigned_to', cardinality: '1:N' },
+  { id: 'link_023', source: 'formation_equipment', target: 'formation_process', relation: 'assigned_to', cardinality: '1:N' },
+  { id: 'link_024', source: 'testing_equipment', target: 'qc_inspection', relation: 'assigned_to', cardinality: '1:N' },
+
+  // ==================== 仓储关系 (contains/stored_in) ====================
+  { id: 'link_030', source: 'raw_warehouse', target: 'cathode_active', relation: 'contains', cardinality: '1:N' },
+  { id: 'link_031', source: 'raw_warehouse', target: 'anode_graphite', relation: 'contains', cardinality: '1:N' },
+  { id: 'link_032', source: 'raw_warehouse', target: 'electrolyte', relation: 'contains', cardinality: '1:N' },
+  { id: 'link_033', source: 'raw_warehouse', target: 'separator', relation: 'contains', cardinality: '1:N' },
+  { id: 'link_034', source: 'wip_inventory', target: 'cell_prismatic', relation: 'contains', cardinality: '1:N' },
+  { id: 'link_035', source: 'finished_goods_wh', target: 'battery_module', relation: 'contains', cardinality: '1:N' },
+  { id: 'link_036', source: 'finished_goods_wh', target: 'battery_pack', relation: 'contains', cardinality: '1:N' },
+
+  // ==================== 质量检验 (inspects/result) ====================
+  { id: 'link_040', source: 'qc_inspection', target: 'cell_prismatic', relation: 'inspects', cardinality: '1:N' },
+  { id: 'link_041', source: 'ipqc_check', target: 'coating_process', relation: 'monitors', cardinality: '1:N' },
+  { id: 'link_042', source: 'oqc_inspection', target: 'battery_pack', relation: 'validates', cardinality: '1:N' },
+  { id: 'link_043', source: 'test_data', target: 'qc_inspection', relation: 'generated_by', cardinality: 'N:1' },
+  { id: 'link_044', source: 'defect_record', target: 'qc_inspection', relation: 'belongs_to', cardinality: 'N:1' },
+
+  // ==================== 产品结构 (part_of/composes) ====================
+  { id: 'link_050', source: 'cell_cylindrical', target: 'battery_module', relation: 'part_of', cardinality: 'N:1' },
+  { id: 'link_051', source: 'cell_prismatic', target: 'battery_module', relation: 'part_of', cardinality: 'N:1' },
+  { id: 'link_052', source: 'battery_module', target: 'battery_pack', relation: 'part_of', cardinality: 'N:1' },
+
+  // ==================== 供应链关系 (supplies/orders) ====================
+  { id: 'link_060', source: 'supplier', target: 'cathode_active', relation: 'supplies', cardinality: '1:N' },
+  { id: 'link_061', source: 'supplier', target: 'anode_graphite', relation: 'supplies', cardinality: '1:N' },
+  { id: 'link_062', source: 'purchase_order', target: 'supplier', relation: 'placed_to', cardinality: 'N:1' },
+  { id: 'link_063', source: 'purchase_order', target: 'raw_warehouse', relation: 'delivers_to', cardinality: '1:1' },
+  { id: 'link_064', source: 'customer_order', target: 'battery_pack', relation: 'orders', cardinality: '1:N' },
+  { id: 'link_065', source: 'customer_order', target: 'customer_info', relation: 'placed_by', cardinality: 'N:1' },
+  { id: 'link_066', source: 'delivery_plan', target: 'customer_order', relation: 'fulfills', cardinality: '1:N' },
+  { id: 'link_067', source: 'material_transfer', target: 'wip_inventory', relation: 'moves_to', cardinality: '1:1' },
+
+  // ==================== 维保关系 (maintains) ====================
+  { id: 'link_070', source: 'maintenance_record', target: 'mixing_equipment', relation: 'maintains', cardinality: 'N:1' },
+  { id: 'link_071', source: 'maintenance_record', target: 'coating_machine', relation: 'maintains', cardinality: 'N:1' },
+  { id: 'link_072', source: 'vendor_contract', target: 'supplier', relation: 'contracts', cardinality: '1:1' },
 ];
 
 // 约束模板库
