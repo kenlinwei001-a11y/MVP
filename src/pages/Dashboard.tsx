@@ -22,7 +22,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   const navItems = [
     { id: 'dashboard', icon: Home, label: '首页', active: true },
-    { id: 'chat', icon: MessageSquare, label: '对话分析' },
+    { id: 'chat', icon: MessageSquare, label: '历史对话' },
     { id: 'ontology-studio', icon: Database, label: '本体配置' },
     { id: 'settings', icon: Settings, label: '设置' },
   ];
