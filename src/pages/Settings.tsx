@@ -5,11 +5,12 @@ interface SettingsProps {
   onNavigate: (page: string) => void;
 }
 
-// Apple 3-Color Palette
-const colors = {
-  bg: { primary: '#FFFFFF', secondary: '#F5F5F7', tertiary: '#E8E8ED' },
-  accent: '#007AFF',
-  text: { primary: '#1D1D1F', secondary: '#6E6E73', tertiary: '#86868B' }
+// Palantir Industrial Theme - 高对比度
+const theme = {
+  bg: { primary: '#1e293b', secondary: '#334155', tertiary: '#475569' },
+  accent: '#3b82f6',
+  text: { primary: '#ffffff', secondary: '#f1f5f9', tertiary: '#cbd5e1' },
+  border: '#3d5166'
 };
 
 const settingsGroups = [
@@ -31,17 +32,16 @@ const settingsGroups = [
 
 export default function Settings({ onNavigate }: SettingsProps) {
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: colors.bg.secondary }}>
+    <div style={{ minHeight: '100vh', backgroundColor: theme.bg.primary }}>
       {/* Header */}
       <header style={{
-        height: '52px',
+        height: '40px',
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
-        padding: '0 20px',
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: `1px solid ${colors.bg.tertiary}`
+        gap: '8px',
+        padding: '0 12px',
+        backgroundColor: theme.bg.secondary,
+        borderBottom: `1px solid ${theme.border}`
       }}>
         <button
           onClick={() => onNavigate('dashboard')}
@@ -49,40 +49,42 @@ export default function Settings({ onNavigate }: SettingsProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '32px',
-            height: '32px',
-            borderRadius: '6px',
+            width: '28px',
+            height: '28px',
+            borderRadius: '4px',
             border: 'none',
             backgroundColor: 'transparent',
             cursor: 'pointer',
-            color: colors.text.secondary
+            color: theme.text.tertiary
           }}
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={18} />
         </button>
-        <span style={{ fontSize: '15px', fontWeight: 600, color: colors.text.primary }}>
+        <span style={{ fontSize: '14px', fontWeight: 600, color: theme.text.primary }}>
           设置
         </span>
       </header>
 
       {/* Content */}
-      <main style={{ maxWidth: '680px', margin: '0 auto', padding: '24px' }}>
+      <main style={{ maxWidth: '640px', margin: '0 auto', padding: '16px' }}>
         {settingsGroups.map((group) => (
-          <div key={group.title} style={{ marginBottom: '24px' }}>
+          <div key={group.title} style={{ marginBottom: '16px' }}>
             <div style={{
-              fontSize: '12px',
+              fontSize: '11px',
               fontWeight: 600,
-              color: colors.text.tertiary,
+              color: theme.text.tertiary,
               textTransform: 'uppercase',
-              marginBottom: '8px',
-              paddingLeft: '12px'
+              marginBottom: '6px',
+              paddingLeft: '8px',
+              letterSpacing: '0.5px'
             }}>
               {group.title}
             </div>
 
             <div style={{
-              backgroundColor: colors.bg.primary,
-              borderRadius: '10px',
+              backgroundColor: theme.bg.secondary,
+              borderRadius: '4px',
+              border: `1px solid ${theme.border}`,
               overflow: 'hidden'
             }}>
               {group.items.map((item, index) => (
@@ -92,32 +94,32 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     display: 'flex',
                     alignItems: 'center',
                     width: '100%',
-                    padding: '12px 16px',
+                    padding: '10px 12px',
                     border: 'none',
-                    borderBottom: index < group.items.length - 1 ? `1px solid ${colors.bg.secondary}` : 'none',
+                    borderBottom: index < group.items.length - 1 ? `1px solid ${theme.border}` : 'none',
                     backgroundColor: 'transparent',
                     cursor: 'pointer',
                     textAlign: 'left'
                   }}
                 >
-                  <item.icon size={20} color={colors.accent} style={{ marginRight: '12px' }} />
+                  <item.icon size={18} color={theme.accent} style={{ marginRight: '10px' }} />
                   <span style={{
                     flex: 1,
-                    fontSize: '14px',
-                    color: colors.text.primary
+                    fontSize: '13px',
+                    color: theme.text.primary
                   }}>
                     {item.label}
                   </span>
                   {item.value && (
                     <span style={{
-                      fontSize: '13px',
-                      color: colors.text.secondary,
+                      fontSize: '12px',
+                      color: theme.text.tertiary,
                       marginRight: '8px'
                     }}>
                       {item.value}
                     </span>
                   )}
-                  <ChevronRight size={18} color={colors.text.tertiary} />
+                  <ChevronRight size={16} color={theme.text.tertiary} />
                 </button>
               ))}
             </div>
@@ -127,9 +129,9 @@ export default function Settings({ onNavigate }: SettingsProps) {
         {/* App Info */}
         <div style={{
           textAlign: 'center',
-          padding: '32px',
-          color: colors.text.tertiary,
-          fontSize: '12px'
+          padding: '24px',
+          color: theme.text.tertiary,
+          fontSize: '11px'
         }}>
           <div>Decision Copilot v2.1.0</div>
           <div style={{ marginTop: '4px' }}>© 2026 All rights reserved</div>

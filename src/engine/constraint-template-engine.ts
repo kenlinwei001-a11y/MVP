@@ -18,6 +18,15 @@ import {
   createCapacityConstraint,
   createPrecedenceConstraint,
   createDependencyConstraint,
+  createTimeWindowConstraint,
+  createDurationConstraint,
+  createTimeGapConstraint,
+  createCalculatedProperty,
+  createAggregatedProperty,
+  createStateTransitionAction,
+  TemporalConstraintNode,
+  DerivedPropertyNode,
+  ActionTriggerNode,
   parseField,
 } from '../types/constraint-ast';
 
@@ -739,6 +748,139 @@ export class ConstraintTemplateEngine {
         throw new Error(`AST template not implemented for rule ${rule.id}`);
     }
   }
+
+  // ==========================================
+  // 时态约束生成（新增）
+  // ==========================================
+
+  /**
+   * 生成时间窗口约束
+   * 例：任务必须在 [08:00, 18:00] 之间执行
+   */
+  generateTimeWindowConstraint(
+    entityName: string,
+    timeField: string,
+    startTime: string,
+    endTime: string,
+    violationAction: 'block' | 'warn' | 'auto_adjust' | 'notify' = 'block'
+  ): TemporalConstraintNode {
+    return createTimeWindowConstraint(
+      `${entityName}.${timeField}`,
+      startTime,
+      endTime,
+      violationAction
+    );
+  }
+
+  /**
+   * 生成持续时间约束
+   * 例：任务持续时间必须在 [min, max] 分钟之间
+   */
+  generateDurationConstraint(
+    entityName: string,
+    durationField: string,
+    options: {
+      minDuration?: number;
+      maxDuration?: number;
+      exactDuration?: number;
+    },
+    violationAction: 'block' | 'warn' | 'auto_adjust' | 'notify' = 'block'
+  ): TemporalConstraintNode {
+    return createDurationConstraint(
+      `${entityName}.${durationField}`,
+      options.minDuration,
+      options.maxDuration,
+      options.exactDuration,
+      violationAction
+    );
+  }
+
+  /**
+   * 生成时间间隔约束
+   * 例：任务A结束后，任务B必须在 [min, max] 分钟后开始
+   */
+  generateTimeGapConstraint(
+    sourceEntity: string,
+    targetEntity: string,
+    sourceField: string,
+    targetField: string,
+    options: {
+      minGap?: number;
+      maxGap?: number;
+    },
+    violationAction: 'block' | 'warn' | 'auto_adjust' | 'notify' = 'block'
+  ): TemporalConstraintNode {
+    return createTimeGapConstraint(
+      `${sourceEntity}.${sourceField}`,
+      `${targetEntity}.${targetField}`,
+      options.minGap,
+      options.maxGap,
+      violationAction
+    );
+  }
+
+  // ==========================================
+  // 派生规则生成（新增）
+  // ==========================================
+
+  /**
+   * 生成计算属性派生规则
+   * 例：OEE = 实际产量 / 理论产能 * 100
+   */
+  generateCalculatedProperty(
+    entityName: string,
+    propertyName: string,
+    formula: any, // ASTNode
+    dependencies: string[],
+    refreshMode: 'realtime' | 'on_demand' | 'scheduled' = 'realtime'
+  ): DerivedPropertyNode {
+    return createCalculatedProperty(
+      `${entityName}.${propertyName}`,
+      formula,
+      dependencies,
+      refreshMode
+    );
+  }
+
+  /**
+   * 生成聚合属性派生规则
+   * 例：总产量 = SUM(批次.产量)
+   */
+  generateAggregatedProperty(
+    targetEntity: string,
+    targetProperty: string,
+    func: 'SUM' | 'AVG' | 'MIN' | 'MAX' | 'COUNT',
+    sourceEntity: string,
+    sourceProperty: string
+  ): DerivedPropertyNode {
+    return createAggregatedProperty(
+      `${targetEntity}.${targetProperty}`,
+      func,
+      `${sourceEntity}.${sourceProperty}`
+    );
+  }
+
+  // ==========================================
+  // Action 生成（新增）
+  // ==========================================
+
+  /**
+   * 生成状态转换 Action
+   * 例：当订单优先级为高时，自动分配给最快产线
+   */
+  generateStateTransitionAction(
+    entityName: string,
+    fromState: string,
+    toState: string,
+    triggerConditions: any[] // ASTNode[]
+  ): ActionTriggerNode {
+    return createStateTransitionAction(
+      entityName,
+      fromState,
+      toState,
+      triggerConditions
+    );
+  }
 }
 
 // ============================================
@@ -776,7 +918,96 @@ export function recommendConstraintsForRelation(
 }
 
 // ============================================
-// 5. 导出单例
+// 5. 快捷使用函数 - 时态约束（新增）
+// ============================================
+
+/**
+ * 快速创建时间窗口约束
+ */
+export function createTemporalTimeWindow(
+  entity: string,
+  field: string,
+  startTime: string,
+  endTime: string
+): TemporalConstraintNode {
+  return getTemplateEngine().generateTimeWindowConstraint(entity, field, startTime, endTime);
+}
+
+/**
+ * 快速创建持续时间约束
+ */
+export function createTemporalDuration(
+  entity: string,
+  field: string,
+  options: { minDuration?: number; maxDuration?: number; exactDuration?: number }
+): TemporalConstraintNode {
+  return getTemplateEngine().generateDurationConstraint(entity, field, options);
+}
+
+/**
+ * 快速创建时间间隔约束
+ */
+export function createTemporalGap(
+  sourceEntity: string,
+  targetEntity: string,
+  sourceField: string,
+  targetField: string,
+  options: { minGap?: number; maxGap?: number }
+): TemporalConstraintNode {
+  return getTemplateEngine().generateTimeGapConstraint(
+    sourceEntity, targetEntity, sourceField, targetField, options
+  );
+}
+
+// ============================================
+// 6. 快捷使用函数 - 派生规则（新增）
+// ============================================
+
+/**
+ * 快速创建计算属性
+ */
+export function createDerivedCalculation(
+  entity: string,
+  property: string,
+  formula: any,
+  dependencies: string[]
+): DerivedPropertyNode {
+  return getTemplateEngine().generateCalculatedProperty(entity, property, formula, dependencies);
+}
+
+/**
+ * 快速创建聚合属性
+ */
+export function createDerivedAggregation(
+  targetEntity: string,
+  targetProperty: string,
+  func: 'SUM' | 'AVG' | 'MIN' | 'MAX' | 'COUNT',
+  sourceEntity: string,
+  sourceProperty: string
+): DerivedPropertyNode {
+  return getTemplateEngine().generateAggregatedProperty(
+    targetEntity, targetProperty, func, sourceEntity, sourceProperty
+  );
+}
+
+// ============================================
+// 7. 快捷使用函数 - Action（新增）
+// ============================================
+
+/**
+ * 快速创建状态转换 Action
+ */
+export function createActionStateTransition(
+  entity: string,
+  fromState: string,
+  toState: string,
+  conditions: any[]
+): ActionTriggerNode {
+  return getTemplateEngine().generateStateTransitionAction(entity, fromState, toState, conditions);
+}
+
+// ============================================
+// 8. 导出单例
 // ============================================
 
 export const constraintTemplateEngine = getTemplateEngine();

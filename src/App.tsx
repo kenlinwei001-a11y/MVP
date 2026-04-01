@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
 import Settings from './pages/Settings';
-import OntologyStudio from './pages/OntologyStudio';
-import AgentEditor from './pages/AgentEditor';
+import Configuration from './pages/Configuration';
 
-type PageType = 'dashboard' | 'chat' | 'settings' | 'database' | 'ontology-studio' | 'agent-editor';
+type PageType = 'dashboard' | 'chat' | 'settings' | 'configuration';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('dashboard');
@@ -19,8 +18,7 @@ function App() {
       {currentPage === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
       {currentPage === 'chat' && <Chat onNavigate={handleNavigate} />}
       {currentPage === 'settings' && <Settings onNavigate={handleNavigate} />}
-      {currentPage === 'database' && <Dashboard onNavigate={handleNavigate} />}
-      {currentPage === 'ontology-studio' && <OntologyStudio onNavigate={handleNavigate} />}
+      {currentPage === 'configuration' && <Configuration onNavigate={handleNavigate} />}
     </div>
   );
 }

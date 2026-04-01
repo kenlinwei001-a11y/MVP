@@ -1,3 +1,7 @@
+// ============================================================================
+// 大型锂电制造企业本体配置器 - Palantir风格工业本体体系
+// ============================================================================
+
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import ReactFlow, {
   Background,
@@ -12,22 +16,9 @@ import ReactFlow, {
   Handle,
   Position,
   MarkerType,
+  ReactFlowInstance,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import {
-  Button,
-  InputGroup,
-  Card,
-  Tabs,
-  Tab,
-  FormGroup,
-  HTMLSelect,
-  Checkbox,
-  Tag,
-  Divider,
-  Dialog,
-  Collapse,
-} from '@blueprintjs/core';
 import {
   ChevronLeft,
   Search,
@@ -37,1540 +28,1135 @@ import {
   Factory,
   Truck,
   Activity,
-  Settings,
   Save,
   Play,
   GitBranch,
   Layers,
   Box,
   AlertTriangle,
-  CheckCircle,
-  Trash2,
   ChevronRight,
   ChevronDown,
-  Braces,
   X,
   Shield,
-  Target,
-  Zap,
   Cpu,
   FileCode,
-  CheckCircle2,
-  XCircle,
-  Info,
+  Filter,
+  Maximize2,
+  Minimize2,
+  Link2,
 } from 'lucide-react';
 
-// --- 导入新的工业级 Schema 和 DSL 类型 ---
-import {
-  EntityTypeEnum,
-  AttributeTypeEnum,
-  RelationTypeEnum,
-  ConstraintTypeEnum,
-  ConstraintCategoryEnum,
-  CardinalityEnum,
-  AttributeSemanticLabels,
-  ENTITY_TYPE_OPTIONS,
-  ATTRIBUTE_TYPE_OPTIONS,
-  RELATION_TYPE_OPTIONS,
-  CONSTRAINT_TYPE_OPTIONS,
-  CONSTRAINT_CATEGORY_OPTIONS,
-  type Entity,
-  type Attribute,
-  type Relation,
-  type Constraint as SchemaConstraint,
-} from '../types/ontology-schema';
-
-import {
-  ASTNodeTypeEnum,
-  BinaryOperatorEnum,
-  ComparisonOperatorEnum,
-  LogicalOperatorEnum,
-  AggregationFunctionEnum,
-  TimeRelationEnum,
-  createLiteral,
-  createComparison,
-  createAggregation,
-  createTimeRelation,
-  createCapacityConstraint,
-  createPrecedenceConstraint,
-  createDependencyConstraint,
-  generateSolverMapping,
-  type ConstraintAST,
-  type SolverMapping,
-  type SolverVariable,
-} from '../types/constraint-ast';
-
-import {
-  constraintTemplateEngine,
-  recommendConstraints,
-  recommendConstraintsForRelation,
-  type ConstraintTemplateRule,
-  type GeneratedConstraintTemplate,
-} from '../engine/constraint-template-engine';
-
-// --- 工业级本体建模类型体系 ---
-
-// 1. 实体类型（Entity Types）
-type EntityType =
-  // 核心实体类型
-  | 'Object'           // 具体对象：设备、订单
-  | 'Actor'            // 行为主体：操作员、系统
-  | 'Organization'     // 组织：工厂、车间
-  | 'Location'         // 空间：仓库、产线位置
-  // 资源类实体
-  | 'PhysicalResource' // 物理资源：设备、产线
-  | 'Material'         // 物料：电芯、原料
-  | 'Energy'           // 能源：电力、气体
-  | 'Tool'             // 工具：模具
-  // 业务对象
-  | 'Order'            // 业务单据：生产订单
-  | 'Plan'             // 计划：排产计划
-  | 'Task'             // 任务：工序任务
-  | 'Batch'            // 批次：批量生产
-  // 时间与状态
-  | 'Event'            // 事件：开工、停机
-  | 'State'            // 状态：运行中、故障
-  | 'TimeWindow'       // 时间窗口：排产时间段
-  // 抽象/语义实体
-  | 'Constraint'       // 约束实体
-  | 'Metric'           // 指标：良率、OEE
-  | 'Rule'             // 规则
-  | 'Scenario'         // 场景：仿真输入
-  // 组合与结构
-  | 'Composite'        // 组合对象
-  | 'HierarchyNode'    // 层级节点（BOM）
-  | 'GraphNode'        // 图结构节点
-  | 'Object_Type'      // 兼容旧数据
-  | 'Relation_Type'    // 兼容旧数据
-  | 'Attribute_Type';  // 兼容旧数据
-
-// 2. 关系类型（Relation Types）
-type RelationType =
-  // 结构关系
-  | 'belongs_to'    // 从属关系
-  | 'part_of'       // 组成关系
-  | 'contains'      // 包含
-  | 'hierarchy'     // 层级
-  // 业务关系
-  | 'assigned_to'   // 分配
-  | 'produced_by'   // 生产
-  | 'consumed_by'   // 消耗
-  | 'depends_on'    // 依赖
-  // 时序关系
-  | 'precedes'      // 先后顺序
-  | 'follows'       // 跟随
-  | 'overlaps'      // 重叠
-  | 'during'        // 在期间
-  // 因果关系
-  | 'causes'        // 导致
-  | 'affects'       // 影响
-  | 'drives'        // 驱动
-  // 约束关系
-  | 'restricts'     // 限制
-  | 'bounds'        // 边界
-  | 'excludes'      // 排斥
-  // 数量关系
-  | 'ratio'         // 比例
-  | 'allocation'    // 分配比例
-  | 'weighting';    // 权重
-
-// 3. 属性类型（Attribute Types）
-type AttributeType =
-  // 基础数据类型
-  | 'string'        // 字符串
-  | 'int'           // 整数
-  | 'float'         // 浮点数
-  | 'boolean'       // 布尔值
-  // 数值增强类型
-  | 'decimal'       // 高精度
-  | 'percentage'    // 百分比
-  | 'currency'      // 金额
-  | 'range'         // 区间
-  // 时间类型
-  | 'datetime'      // 时间点
-  | 'duration'      // 持续时间
-  | 'timestamp'     // 时间戳
-  | 'interval'      // 时间区间
-  // 枚举与分类
-  | 'enum'          // 枚举
-  | 'set'           // 多选
-  | 'category'      // 分类
-  // 引用类型
-  | 'entity_ref'    // 指向实体
-  | 'relation_ref'  // 指向关系
-  | 'external_ref'  // 外部系统ID
-  // 结构化类型
-  | 'object'        // JSON对象
-  | 'array'         // 列表
-  | 'map'           // 键值对
-  // 工业扩展
-  | 'unit_value'    // 带单位（kg/kWh）
-  | 'time_series'   // 时序数据
-  | 'distribution'  // 概率分布
-  | 'vector'        // 向量（AI特征）
-  | 'computed';     // 计算属性
-
-// 4. 约束类型（Constraint Types）
-// 使用标准化的约束分类（与 ConstraintCategoryEnum 保持一致）
-type ConstraintCategory =
-  | 'capacity'       // 产能约束
-  | 'time'           // 时间约束
-  | 'dependency'     // 依赖约束
-  | 'resource'       // 资源约束
-  | 'flow'           // 流量约束
-  | 'optimization'   // 优化目标
-  | 'statistical'    // 统计约束
-  // 保留旧分类以兼容已有数据
-  | 'equality'
-  | 'inequality'
-  | 'conditional'
-  | 'availability'
-  | 'exclusivity'
-  | 'precedence'
-  | 'deadline'
-  | 'no_overlap'
-  | 'flow_balance'
-  | 'allocation'
-  | 'quota'
-  | 'minimize'
-  | 'maximize'
-  | 'balance'
-  | 'avg_limit'
-  | 'variance'
-  | 'distribution';
+import type { ConstraintAST } from '../types/constraint-ast';
 
 // --- Types ---
 
 interface OntologyEntity {
   id: string;
-  type: EntityType;
   displayName: string;
-  icon: string;
-  status: 'verified' | 'draft' | 'conflict';
-  properties: Property[];
+  type: 'Object_Type' | 'Relation_Type' | 'Attribute_Type';
+  status: 'active' | 'draft' | 'deprecated';
+  icon?: string;
+  properties: Array<{
+    key: string;
+    value?: string | number | boolean;
+    unit?: string;
+    type?: string;
+  }>;
+  description?: string;
   x?: number;
   y?: number;
-}
-
-interface Property {
-  key: string;
-  type: AttributeType;
-  value?: string | number;
-  unit?: string;
-  formula?: string;
-  isRequired: boolean;
-}
-
-interface OntologyLink {
-  id: string;
-  source: string;
-  target: string;
-  relation: RelationType | string;
-  cardinality: '1:1' | '1:N' | 'N:1' | 'N:M';
-  // 关系属性
-  properties?: {
-    weight?: number;        // 权重
-    priority?: number;      // 优先级
-    strength?: number;      // 关系强度
-    confidence?: number;    // 置信度
-    capacity?: number;      // 关系容量
-    startTime?: string;     // 开始时间
-    endTime?: string;       // 结束时间
-    duration?: string;      // 持续时间
-    frequency?: string;     // 频率
-    active?: boolean;       // 是否激活
-    mutable?: boolean;      // 是否可变
-    reversible?: boolean;   // 是否可逆
-  };
-}
-
-type ConstraintType = 'hard' | 'soft' | 'objective';
-type ConstraintStatus = 'active' | 'inactive' | 'error';
-
-interface Constraint {
-  id: string;
-  name: string;
-  type: ConstraintType;
-  category?: ConstraintCategory;  // 约束分类（可选，兼容旧数据）
-  expression: string;
-  description: string;
-  entityId: string;
-  priority: number;
-  status: ConstraintStatus;
-  group: string;
-  references: string[];
-}
-
-interface ValidationResult {
-  type: 'syntax' | 'reference' | 'type' | 'conflict' | 'logic';
-  severity: 'error' | 'warning' | 'info';
-  message: string;
-  constraintId?: string;
-}
-
-interface ValidationResult {
-  type: 'syntax' | 'reference' | 'type' | 'conflict' | 'logic';
-  severity: 'error' | 'warning' | 'info';
-  message: string;
-  constraintId?: string;
+  domain: string; // 所属域ID
+  domainName: string; // 所属域名称
+  // 扩展配置信息
+  version?: string;
+  namespace?: string;
+  tags?: string[];
+  dependencies?: string[];
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+  parent_id?: string;
+  metadata?: Record<string, any>;
 }
 
 interface OntologyDomain {
   id: string;
   name: string;
   displayName: string;
-  path: string;
-  status: 'verified' | 'draft' | 'conflict';
+  icon: string;
+  description?: string;
   entities: OntologyEntity[];
-  children?: OntologyDomain[];
 }
 
-// --- Mock Data ---
+interface OntologyLink {
+  id: string;
+  source: string;
+  target: string;
+  relation: string;
+  // Palantir本体论 - 关系类型系统
+  relationType: 'structural' | 'flow' | 'control' | 'temporal' | 'causal' | 'reference';
+  cardinality: '1:1' | '1:N' | 'N:1' | 'N:N';
+  description?: string;
+  // 关系属性
+  properties?: {
+    weight?: number;           // 关系权重（用于图算法）
+    strength?: 'strong' | 'weak' | 'conditional';  // 关系强制程度
+    direction: 'directed' | 'bidirectional';       // 方向性
+    temporality: 'persistent' | 'transient';       // 时间持续性
+    validFrom?: string;        // 关系生效时间
+    validTo?: string;          // 关系失效时间
+  };
+  // 业务语义标签
+  semantics?: string[];
+}
 
-const initialDomains: OntologyDomain[] = [
+// 约束库定义 - 全局可复用的约束模板
+interface ConstraintLibraryItem {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  category: 'hard' | 'soft' | 'business';
+  expression: string;
+  applicableDomains: string[]; // 适用于哪些领域
+  parameters?: string[]; // 参数列表
+}
+
+// 实体已应用的约束实例
+interface Constraint {
+  id: string;
+  entityId: string;
+  libraryItemId: string; // 关联到约束库
+  type: string;
+  category: string;
+  expression: string;
+  description: string;
+  ast?: ConstraintAST;
+}
+
+interface ValidationResult {
+  entityId: string;
+  severity: 'error' | 'warning' | 'info';
+  message: string;
+  rule: string;
+}
+
+// ============================================================================
+// 全局约束库 - 可复用的约束定义
+// ============================================================================
+const constraintLibrary: ConstraintLibraryItem[] = [
   {
-    id: 'dom-raw',
-    name: 'RawMaterials',
-    displayName: '原材料管理',
-    path: 'RawMaterials',
-    status: 'verified',
-    entities: [
-      {
-        id: 'cathode_active',
-        type: 'Object_Type',
-        displayName: '正极活性物质',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'material_type', type: 'string', value: 'NMC811', isRequired: true },
-          { key: 'purity', type: 'float', value: 99.5, unit: '%', isRequired: true },
-          { key: 'particle_size_d50', type: 'float', value: 12.5, unit: 'μm', isRequired: true },
-          { key: 'surface_area', type: 'float', value: 0.25, unit: 'm²/g', isRequired: false },
-          { key: 'tap_density', type: 'float', value: 2.2, unit: 'g/cm³', isRequired: false },
-          { key: 'moisture_content', type: 'float', value: 0.02, unit: '%', isRequired: true },
-          { key: 'batch_no', type: 'string', value: 'CAT-20240326-001', isRequired: true },
-        ],
-      },
-      {
-        id: 'anode_graphite',
-        type: 'Object_Type',
-        displayName: '人造石墨负极',
-        icon: 'box',
-        status: 'verified',
-        properties: [
-          { key: 'grade', type: 'string', value: 'AG-18', isRequired: true },
-          { key: 'd50_particle_size', type: 'float', value: 18.0, unit: 'μm', isRequired: true },
-          { key: 'first_efficiency', type: 'float', value: 94.5, unit: '%', isRequired: true },
-          { key: 'capacity', type: 'float', value: 350, unit: 'mAh/g', isRequired: true },
-          { key: 'surface_area', type: 'float', value: 1.8, unit: 'm²/g', isRequired: false },
-        ],
-      },
-      {
-        id: 'electrolyte',
-        type: 'Object_Type',
-        displayName: '电解液',
-        icon: 'battery',
-        status: 'verified',
-        properties: [
-          { key: 'formula', type: 'string', value: 'LiPF6/EC:DMC:EMC', isRequired: true },
-          { key: 'concentration', type: 'float', value: 1.0, unit: 'mol/L', isRequired: true },
-          { key: 'water_content', type: 'float', value: 10, unit: 'ppm', isRequired: true },
-          { key: 'hf_content', type: 'float', value: 50, unit: 'ppm', isRequired: true },
-          { key: 'density', type: 'float', value: 1.2, unit: 'g/cm³', isRequired: false },
-        ],
-      },
-      {
-        id: 'separator',
-        type: 'Object_Type',
-        displayName: '隔膜',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'material', type: 'string', value: 'PE', isRequired: true },
-          { key: 'thickness', type: 'float', value: 12, unit: 'μm', isRequired: true },
-          { key: 'porosity', type: 'float', value: 40, unit: '%', isRequired: true },
-          { key: 'tensile_strength_md', type: 'float', value: 150, unit: 'MPa', isRequired: false },
-          { key: 'tensile_strength_td', type: 'float', value: 120, unit: 'MPa', isRequired: false },
-        ],
-      },
-      {
-        id: 'conductive_additive',
-        type: 'Object_Type',
-        displayName: '导电剂',
-        icon: 'box',
-        status: 'draft',
-        properties: [
-          { key: 'type', type: 'string', value: 'CNT', isRequired: true },
-          { key: 'carbon_content', type: 'float', value: 4.5, unit: '%', isRequired: true },
-          { key: 'solid_content', type: 'float', value: 4.0, unit: '%', isRequired: true },
-        ],
-      },
-      {
-        id: 'binder',
-        type: 'Object_Type',
-        displayName: '粘结剂',
-        icon: 'box',
-        status: 'verified',
-        properties: [
-          { key: 'type', type: 'string', value: 'PVDF', isRequired: true },
-          { key: 'molecular_weight', type: 'float', value: 900000, unit: 'g/mol', isRequired: false },
-          { key: 'solid_content', type: 'float', value: 8.0, unit: '%', isRequired: true },
-        ],
-      },
-      {
-        id: 'current_collector',
-        type: 'Object_Type',
-        displayName: '集流体',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'type', type: 'string', value: 'Al_Foil', isRequired: true },
-          { key: 'thickness', type: 'float', value: 12, unit: 'μm', isRequired: true },
-          { key: 'width', type: 'float', value: 400, unit: 'mm', isRequired: true },
-          { key: 'purity', type: 'float', value: 99.5, unit: '%', isRequired: true },
-        ],
-      },
-    ],
-    children: [
-      {
-        id: 'dom-raw-inventory',
-        name: 'RawInventory',
-        displayName: '原料仓储',
-        path: 'RawMaterials/RawInventory',
-        status: 'verified',
-        entities: [
-          {
-            id: 'raw_warehouse',
-            type: 'Object_Type',
-            displayName: '原料仓库',
-            icon: 'box',
-            status: 'verified',
-            properties: [
-              { key: 'warehouse_code', type: 'string', value: 'RW-01', isRequired: true },
-              { key: 'storage_capacity', type: 'float', value: 5000, unit: 'tons', isRequired: true },
-              { key: 'temperature_control', type: 'string', value: '25±2°C', isRequired: true },
-              { key: 'humidity_control', type: 'string', value: '≤60%RH', isRequired: true },
-            ],
-          },
-          {
-            id: 'raw_inventory',
-            type: 'Object_Type',
-            displayName: '原料库存',
-            icon: 'box',
-            status: 'verified',
-            properties: [
-              { key: 'material_id', type: 'string', value: 'CAT-NMC811', isRequired: true },
-              { key: 'batch_no', type: 'string', value: 'B20240326', isRequired: true },
-              { key: 'quantity', type: 'float', value: 5000, unit: 'kg', isRequired: true },
-              { key: 'storage_location', type: 'string', value: 'A-01-02', isRequired: true },
-              { key: 'expiry_date', type: 'string', value: '2025-03-26', isRequired: true },
-              { key: 'quality_status', type: 'string', value: '合格', isRequired: true },
-            ],
-          },
-        ],
-      },
-    ],
+    id: 'lib-capacity-utilization',
+    name: '产能利用率上限',
+    description: '确保产能利用率不超过95%，避免过度加班和设备损耗',
+    type: 'capacity_check',
+    category: 'hard',
+    expression: 'utilization_rate <= 95',
+    applicableDomains: ['org', 'cap', 'mfg'],
+    parameters: ['utilization_rate']
   },
   {
-    id: 'dom-process',
-    name: 'Process',
-    displayName: '工艺过程',
-    path: 'Process',
-    status: 'verified',
-    entities: [
-      {
-        id: 'mixing_process',
-        type: 'Object_Type',
-        displayName: '搅拌工序',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'process_code', type: 'string', value: 'MX-001', isRequired: true },
-          { key: 'mixing_time', type: 'float', value: 180, unit: 'min', isRequired: true },
-          { key: 'vacuum_degree', type: 'float', value: -0.095, unit: 'MPa', isRequired: true },
-          { key: 'temperature', type: 'float', value: 25, unit: '°C', isRequired: true },
-          { key: 'viscosity', type: 'float', value: 5000, unit: 'mPa·s', isRequired: true },
-          { key: 'solid_content', type: 'float', value: 72, unit: '%', isRequired: true },
-        ],
-      },
-      {
-        id: 'coating_process',
-        type: 'Object_Type',
-        displayName: '涂布工序',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'process_code', type: 'string', value: 'CT-001', isRequired: true },
-          { key: 'coating_speed', type: 'float', value: 50, unit: 'm/min', isRequired: true },
-          { key: 'coating_weight', type: 'float', value: 25, unit: 'mg/cm²', isRequired: true },
-          { key: 'oven_temperature', type: 'string', value: '120/130/140', unit: '°C', isRequired: true },
-          { key: 'thickness', type: 'float', value: 150, unit: 'μm', isRequired: true },
-        ],
-      },
-      {
-        id: 'calendering_process',
-        type: 'Object_Type',
-        displayName: '辊压工序',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'process_code', type: 'string', value: 'CL-001', isRequired: true },
-          { key: 'roll_pressure', type: 'float', value: 300, unit: 'tons', isRequired: true },
-          { key: 'line_speed', type: 'float', value: 30, unit: 'm/min', isRequired: true },
-          { key: 'thickness_after', type: 'float', value: 120, unit: 'μm', isRequired: true },
-          { key: 'density', type: 'float', value: 3.4, unit: 'g/cm³', isRequired: true },
-        ],
-      },
-      {
-        id: 'slitting_process',
-        type: 'Object_Type',
-        displayName: '分切工序',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'process_code', type: 'string', value: 'SL-001', isRequired: true },
-          { key: 'slitting_width', type: 'float', value: 65, unit: 'mm', isRequired: true },
-          { key: 'edge_trim_width', type: 'float', value: 2, unit: 'mm', isRequired: true },
-          { key: 'tension', type: 'float', value: 150, unit: 'N', isRequired: true },
-        ],
-      },
-      {
-        id: 'winding_process',
-        type: 'Object_Type',
-        displayName: '卷绕工序',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'process_code', type: 'string', value: 'WD-001', isRequired: true },
-          { key: 'winding_tension', type: 'float', value: 25, unit: 'N', isRequired: true },
-          { key: 'alignment_precision', type: 'float', value: 0.3, unit: 'mm', isRequired: true },
-          { key: 'electrode_length', type: 'float', value: 5000, unit: 'mm', isRequired: true },
-        ],
-      },
-      {
-        id: 'electrolyte_filling',
-        type: 'Object_Type',
-        displayName: '注液工序',
-        icon: 'battery',
-        status: 'verified',
-        properties: [
-          { key: 'process_code', type: 'string', value: 'EF-001', isRequired: true },
-          { key: 'electrolyte_volume', type: 'float', value: 4.5, unit: 'g', isRequired: true },
-          { key: 'filling_precision', type: 'float', value: 0.5, unit: '%', isRequired: true },
-          { key: 'vacuum_level', type: 'float', value: -0.098, unit: 'MPa', isRequired: true },
-        ],
-      },
-      {
-        id: 'formation_process',
-        type: 'Object_Type',
-        displayName: '化成工序',
-        icon: 'battery',
-        status: 'verified',
-        properties: [
-          { key: 'process_code', type: 'string', value: 'FM-001', isRequired: true },
-          { key: 'formation_protocol', type: 'string', value: '0.05C-3.0V-4.2V', isRequired: true },
-          { key: 'temperature', type: 'float', value: 45, unit: '°C', isRequired: true },
-          { key: 'capacity_retention', type: 'float', value: 85, unit: '%', isRequired: true },
-          { key: 'sei_quality', type: 'string', value: '合格', isRequired: true },
-        ],
-      },
-      {
-        id: 'aging_process',
-        type: 'Object_Type',
-        displayName: '老化工序',
-        icon: 'battery',
-        status: 'verified',
-        properties: [
-          { key: 'process_code', type: 'string', value: 'AG-001', isRequired: true },
-          { key: 'aging_temperature', type: 'float', value: 45, unit: '°C', isRequired: true },
-          { key: 'aging_time', type: 'float', value: 72, unit: 'h', isRequired: true },
-          { key: 'voltage_drop_threshold', type: 'float', value: 50, unit: 'mV', isRequired: true },
-        ],
-      },
-    ],
-    children: [],
+    id: 'lib-quality-yield',
+    name: '质量合格率下限',
+    description: '确保产品一次通过率不低于98%',
+    type: 'quality_check',
+    category: 'hard',
+    expression: 'yield_rate >= 98',
+    applicableDomains: ['quality', 'mfg', 'prod'],
+    parameters: ['yield_rate']
   },
   {
-    id: 'dom-equipment',
-    name: 'Equipment',
-    displayName: '生产设备',
-    path: 'Equipment',
-    status: 'verified',
-    entities: [
-      {
-        id: 'mixing_equipment',
-        type: 'Object_Type',
-        displayName: '真空搅拌机',
-        icon: 'battery',
-        status: 'verified',
-        properties: [
-          { key: 'equipment_id', type: 'string', value: 'MX-001-A', isRequired: true },
-          { key: 'capacity', type: 'float', value: 500, unit: 'L', isRequired: true },
-          { key: 'power', type: 'float', value: 75, unit: 'kW', isRequired: true },
-          { key: 'max_speed', type: 'float', value: 2000, unit: 'rpm', isRequired: true },
-          { key: 'status', type: 'string', value: '运行中', isRequired: true },
-          { key: 'oee', type: 'float', value: 85, unit: '%', isRequired: true },
-        ],
-      },
-      {
-        id: 'coating_machine',
-        type: 'Object_Type',
-        displayName: '涂布机',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'equipment_id', type: 'string', value: 'CT-001-A', isRequired: true },
-          { key: 'max_speed', type: 'float', value: 80, unit: 'm/min', isRequired: true },
-          { key: 'max_width', type: 'float', value: 700, unit: 'mm', isRequired: true },
-          { key: 'coating_precision', type: 'float', value: 1.0, unit: '%', isRequired: true },
-          { key: 'status', type: 'string', value: '运行中', isRequired: true },
-        ],
-      },
-      {
-        id: 'winding_machine',
-        type: 'Object_Type',
-        displayName: '卷绕机',
-        icon: 'battery',
-        status: 'verified',
-        properties: [
-          { key: 'equipment_id', type: 'string', value: 'WD-001-A', isRequired: true },
-          { key: 'production_rate', type: 'float', value: 12, unit: 'ppm', isRequired: true },
-          { key: 'alignment_precision', type: 'float', value: 0.2, unit: 'mm', isRequired: true },
-          { key: 'defect_rate', type: 'float', value: 0.1, unit: '%', isRequired: true },
-        ],
-      },
-      {
-        id: 'formation_equipment',
-        type: 'Object_Type',
-        displayName: '化成柜',
-        icon: 'battery',
-        status: 'verified',
-        properties: [
-          { key: 'equipment_id', type: 'string', value: 'FM-001-A', isRequired: true },
-          { key: 'channel_count', type: 'int', value: 512, unit: 'channels', isRequired: true },
-          { key: 'current_range', type: 'string', value: '0.1-10', unit: 'A', isRequired: true },
-          { key: 'voltage_precision', type: 'float', value: 0.05, unit: '%FS', isRequired: true },
-        ],
-      },
-      {
-        id: 'testing_equipment',
-        type: 'Object_Type',
-        displayName: '检测设备',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'equipment_id', type: 'string', value: 'TE-001-A', isRequired: true },
-          { key: 'test_type', type: 'string', value: '内阻测试', isRequired: true },
-          { key: 'accuracy', type: 'float', value: 0.1, unit: '%', isRequired: true },
-          { key: 'throughput', type: 'int', value: 3600, unit: 'pcs/h', isRequired: true },
-        ],
-      },
-    ],
-    children: [
-      {
-        id: 'dom-maintenance',
-        name: 'Maintenance',
-        displayName: '设备维保',
-        path: 'Equipment/Maintenance',
-        status: 'verified',
-        entities: [
-          {
-            id: 'maintenance_record',
-            type: 'Object_Type',
-            displayName: '维保记录',
-            icon: 'box',
-            status: 'verified',
-            properties: [
-              { key: 'record_id', type: 'string', value: 'MR-20240326-001', isRequired: true },
-              { key: 'equipment_id', type: 'string', value: 'MX-001-A', isRequired: true },
-              { key: 'maintenance_type', type: 'string', value: '预防性维护', isRequired: true },
-              { key: 'duration', type: 'float', value: 4, unit: 'h', isRequired: true },
-              { key: 'next_due_date', type: 'string', value: '2024-04-26', isRequired: true },
-            ],
-          },
-        ],
-      },
-    ],
+    id: 'lib-equipment-availability',
+    name: '设备可用率下限',
+    description: '关键设备可用率需保持在90%以上',
+    type: 'maintenance',
+    category: 'soft',
+    expression: 'availability >= 90',
+    applicableDomains: ['cap'],
+    parameters: ['availability']
   },
   {
-    id: 'dom-product',
-    name: 'Product',
-    displayName: '产品管理',
-    path: 'Product',
-    status: 'verified',
-    entities: [
-      {
-        id: 'cell_prismatic',
-        type: 'Object_Type',
-        displayName: '方形电芯',
-        icon: 'battery',
-        status: 'verified',
-        properties: [
-          { key: 'cell_model', type: 'string', value: 'LFP-100Ah', isRequired: true },
-          { key: 'nominal_capacity', type: 'float', value: 100, unit: 'Ah', isRequired: true },
-          { key: 'nominal_voltage', type: 'float', value: 3.2, unit: 'V', isRequired: true },
-          { key: 'energy_density', type: 'float', value: 160, unit: 'Wh/kg', isRequired: true },
-          { key: 'cycle_life', type: 'int', value: 3500, unit: 'cycles', isRequired: true },
-          { key: 'dimensions', type: 'string', value: '148*26*91', unit: 'mm', isRequired: true },
-          { key: 'weight', type: 'float', value: 2.1, unit: 'kg', isRequired: true },
-        ],
-      },
-      {
-        id: 'cell_cylindrical',
-        type: 'Object_Type',
-        displayName: '圆柱电芯',
-        icon: 'battery',
-        status: 'verified',
-        properties: [
-          { key: 'cell_model', type: 'string', value: '21700-5000mAh', isRequired: true },
-          { key: 'nominal_capacity', type: 'float', value: 5.0, unit: 'Ah', isRequired: true },
-          { key: 'nominal_voltage', type: 'float', value: 3.6, unit: 'V', isRequired: true },
-          { key: 'energy_density', type: 'float', value: 260, unit: 'Wh/kg', isRequired: true },
-          { key: 'max_discharge_rate', type: 'float', value: 3, unit: 'C', isRequired: true },
-        ],
-      },
-      {
-        id: 'battery_module',
-        type: 'Object_Type',
-        displayName: '电池模组',
-        icon: 'battery',
-        status: 'verified',
-        properties: [
-          { key: 'module_model', type: 'string', value: 'LFP-1P16S', isRequired: true },
-          { key: 'configuration', type: 'string', value: '1P16S', isRequired: true },
-          { key: 'module_voltage', type: 'float', value: 51.2, unit: 'V', isRequired: true },
-          { key: 'module_capacity', type: 'float', value: 100, unit: 'Ah', isRequired: true },
-          { key: 'module_energy', type: 'float', value: 5.12, unit: 'kWh', isRequired: true },
-          { key: 'cell_count', type: 'int', value: 16, unit: 'pcs', isRequired: true },
-        ],
-      },
-      {
-        id: 'battery_pack',
-        type: 'Object_Type',
-        displayName: '电池Pack',
-        icon: 'battery',
-        status: 'verified',
-        properties: [
-          { key: 'pack_model', type: 'string', value: 'BESS-100kWh', isRequired: true },
-          { key: 'pack_energy', type: 'float', value: 100, unit: 'kWh', isRequired: true },
-          { key: 'pack_voltage', type: 'float', value: 614.4, unit: 'V', isRequired: true },
-          { key: 'module_count', type: 'int', value: 20, unit: 'pcs', isRequired: true },
-          { key: 'bms_type', type: 'string', value: 'Distributed', isRequired: true },
-          { key: 'cooling_method', type: 'string', value: 'Liquid_Cooling', isRequired: true },
-        ],
-      },
-    ],
-    children: [],
+    id: 'lib-inventory-turnover',
+    name: '库存周转天数',
+    description: '原材料库存周转天数不超过30天',
+    type: 'inventory_check',
+    category: 'business',
+    expression: 'inventory_days <= 30',
+    applicableDomains: ['supply'],
+    parameters: ['inventory_days']
   },
   {
-    id: 'dom-quality',
-    name: 'Quality',
-    displayName: '质量管理',
-    path: 'Quality',
-    status: 'verified',
-    entities: [
-      {
-        id: 'qc_inspection',
-        type: 'Object_Type',
-        displayName: '来料检验',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'inspection_id', type: 'string', value: 'IQC-20240326-001', isRequired: true },
-          { key: 'material_id', type: 'string', value: 'CAT-NMC811', isRequired: true },
-          { key: 'batch_no', type: 'string', value: 'B20240326', isRequired: true },
-          { key: 'inspection_items', type: 'string', value: '外观/粒度/比表', isRequired: true },
-          { key: 'result', type: 'string', value: '合格', isRequired: true },
-          { key: 'inspector', type: 'string', value: '张三', isRequired: true },
-        ],
-      },
-      {
-        id: 'ipqc_check',
-        type: 'Object_Type',
-        displayName: '过程检验',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'check_id', type: 'string', value: 'IPQC-20240326-001', isRequired: true },
-          { key: 'process_name', type: 'string', value: '涂布', isRequired: true },
-          { key: 'check_item', type: 'string', value: '涂布重量', isRequired: true },
-          { key: 'spec_range', type: 'string', value: '25±0.5', unit: 'mg/cm²', isRequired: true },
-          { key: 'measured_value', type: 'float', value: 25.1, unit: 'mg/cm²', isRequired: true },
-          { key: 'result', type: 'string', value: '合格', isRequired: true },
-        ],
-      },
-      {
-        id: 'oqc_inspection',
-        type: 'Object_Type',
-        displayName: '出货检验',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'inspection_id', type: 'string', value: 'OQC-20240326-001', isRequired: true },
-          { key: 'cell_batch', type: 'string', value: 'CB20240326', isRequired: true },
-          { key: 'sample_size', type: 'int', value: 32, unit: 'pcs', isRequired: true },
-          { key: 'capacity_test', type: 'string', value: '合格', isRequired: true },
-          { key: 'ir_test', type: 'string', value: '合格', isRequired: true },
-          { key: 'appearance_check', type: 'string', value: '合格', isRequired: true },
-        ],
-      },
-      {
-        id: 'defect_record',
-        type: 'Object_Type',
-        displayName: '缺陷记录',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'defect_id', type: 'string', value: 'DF-20240326-001', isRequired: true },
-          { key: 'defect_type', type: 'string', value: '极片褶皱', isRequired: true },
-          { key: 'severity', type: 'string', value: '轻微', isRequired: true },
-          { key: 'occurrence_process', type: 'string', value: '涂布', isRequired: true },
-          { key: 'root_cause', type: 'string', value: '张力不均', isRequired: false },
-          { key: 'corrective_action', type: 'string', value: '调整张力参数', isRequired: false },
-        ],
-      },
-      {
-        id: 'test_data',
-        type: 'Object_Type',
-        displayName: '测试数据',
-        icon: 'layers',
-        status: 'verified',
-        properties: [
-          { key: 'test_id', type: 'string', value: 'TEST-20240326-001', isRequired: true },
-          { key: 'cell_id', type: 'string', value: 'CELL-20240326-0001', isRequired: true },
-          { key: 'capacity_0_2C', type: 'float', value: 100.5, unit: 'Ah', isRequired: true },
-          { key: 'internal_resistance', type: 'float', value: 0.8, unit: 'mΩ', isRequired: true },
-          { key: 'voltage', type: 'float', value: 3.65, unit: 'V', isRequired: true },
-          { key: 'k_value', type: 'float', value: 0.08, unit: 'mV/h', isRequired: true },
-        ],
-      },
-    ],
-    children: [],
+    id: 'lib-delivery-otd',
+    name: '订单准时交付率',
+    description: '订单准时交付率需达到95%以上',
+    type: 'delivery_check',
+    category: 'hard',
+    expression: 'otd_rate >= 95',
+    applicableDomains: ['sales', 'mfg'],
+    parameters: ['otd_rate']
   },
   {
-    id: 'dom-warehouse',
-    name: 'Warehouse',
-    displayName: '仓储物流',
-    path: 'Warehouse',
-    status: 'verified',
-    entities: [
-      {
-        id: 'finished_goods_wh',
-        type: 'Object_Type',
-        displayName: '成品仓库',
-        icon: 'box',
-        status: 'verified',
-        properties: [
-          { key: 'warehouse_code', type: 'string', value: 'FG-01', isRequired: true },
-          { key: 'warehouse_type', type: 'string', value: '常温库', isRequired: true },
-          { key: 'capacity', type: 'int', value: 100000, unit: 'pcs', isRequired: true },
-          { key: 'current_stock', type: 'int', value: 85000, unit: 'pcs', isRequired: true },
-          { key: 'safety_stock', type: 'int', value: 20000, unit: 'pcs', isRequired: true },
-        ],
-      },
-      {
-        id: 'wip_inventory',
-        type: 'Object_Type',
-        displayName: '在制品库存',
-        icon: 'box',
-        status: 'verified',
-        properties: [
-          { key: 'wip_id', type: 'string', value: 'WIP-20240326-001', isRequired: true },
-          { key: 'process_stage', type: 'string', value: '卷绕完成', isRequired: true },
-          { key: 'quantity', type: 'int', value: 5000, unit: 'pcs', isRequired: true },
-          { key: 'waiting_time', type: 'float', value: 2, unit: 'h', isRequired: true },
-        ],
-      },
-      {
-        id: 'material_transfer',
-        type: 'Object_Type',
-        displayName: '物料流转',
-        icon: 'truck',
-        status: 'verified',
-        properties: [
-          { key: 'transfer_id', type: 'string', value: 'MT-20240326-001', isRequired: true },
-          { key: 'from_location', type: 'string', value: '涂布车间', isRequired: true },
-          { key: 'to_location', type: 'string', value: '辊压车间', isRequired: true },
-          { key: 'material_type', type: 'string', value: '正极极片', isRequired: true },
-          { key: 'transfer_qty', type: 'float', value: 1000, unit: 'kg', isRequired: true },
-          { key: 'transfer_time', type: 'string', value: '2024-03-26 10:00', isRequired: true },
-        ],
-      },
-    ],
-    children: [],
+    id: 'lib-defect-rate',
+    name: '缺陷率上限',
+    description: '过程缺陷率不超过0.5%',
+    type: 'quality_check',
+    category: 'hard',
+    expression: 'defect_rate <= 0.5',
+    applicableDomains: ['quality', 'mfg'],
+    parameters: ['defect_rate']
   },
   {
-    id: 'dom-order',
-    name: 'Order',
-    displayName: '销售订单',
-    path: 'Order',
-    status: 'verified',
-    entities: [
-      {
-        id: 'customer_order',
-        type: 'Object_Type',
-        displayName: '客户订单',
-        icon: 'box',
-        status: 'verified',
-        properties: [
-          { key: 'order_no', type: 'string', value: 'SO-20240326-001', isRequired: true },
-          { key: 'customer_name', type: 'string', value: '某新能源汽车有限公司', isRequired: true },
-          { key: 'product_model', type: 'string', value: 'LFP-100Ah', isRequired: true },
-          { key: 'order_qty', type: 'int', value: 10000, unit: 'pcs', isRequired: true },
-          { key: 'delivery_date', type: 'string', value: '2024-04-15', isRequired: true },
-          { key: 'priority', type: 'string', value: '高', isRequired: true },
-          { key: 'order_status', type: 'string', value: '生产中', isRequired: true },
-        ],
-      },
-      {
-        id: 'delivery_plan',
-        type: 'Object_Type',
-        displayName: '交付计划',
-        icon: 'truck',
-        status: 'verified',
-        properties: [
-          { key: 'plan_id', type: 'string', value: 'DP-20240326-001', isRequired: true },
-          { key: 'order_no', type: 'string', value: 'SO-20240326-001', isRequired: true },
-          { key: 'planned_qty', type: 'int', value: 5000, unit: 'pcs', isRequired: true },
-          { key: 'planned_date', type: 'string', value: '2024-04-10', isRequired: true },
-          { key: 'delivery_method', type: 'string', value: '汽运', isRequired: true },
-        ],
-      },
-      {
-        id: 'customer_info',
-        type: 'Object_Type',
-        displayName: '客户信息',
-        icon: 'box',
-        status: 'verified',
-        properties: [
-          { key: 'customer_code', type: 'string', value: 'CUST-001', isRequired: true },
-          { key: 'customer_name', type: 'string', value: '某新能源汽车有限公司', isRequired: true },
-          { key: 'customer_grade', type: 'string', value: 'A级', isRequired: true },
-          { key: 'credit_limit', type: 'float', value: 10000000, unit: 'CNY', isRequired: true },
-          { key: 'payment_terms', type: 'string', value: '月结30天', isRequired: true },
-        ],
-      },
-    ],
-    children: [],
+    id: 'lib-oee-target',
+    name: 'OEE目标值',
+    description: '设备综合效率OEE目标值85%',
+    type: 'efficiency',
+    category: 'soft',
+    expression: 'oee >= 85',
+    applicableDomains: ['cap', 'mfg'],
+    parameters: ['oee']
   },
   {
-    id: 'dom-supply',
-    name: 'SupplyChain',
-    displayName: '供应链',
-    path: 'SupplyChain',
-    status: 'verified',
-    entities: [
-      {
-        id: 'supplier',
-        type: 'Object_Type',
-        displayName: '供应商',
-        icon: 'truck',
-        status: 'verified',
-        properties: [
-          { key: 'supplier_code', type: 'string', value: 'SUP-001', isRequired: true },
-          { key: 'supplier_name', type: 'string', value: '某正极材料有限公司', isRequired: true },
-          { key: 'material_category', type: 'string', value: '正极材料', isRequired: true },
-          { key: 'qualification_status', type: 'string', value: '合格供应商', isRequired: true },
-          { key: 'assessment_score', type: 'float', value: 95, unit: '分', isRequired: true },
-        ],
-      },
-      {
-        id: 'purchase_order',
-        type: 'Object_Type',
-        displayName: '采购订单',
-        icon: 'box',
-        status: 'verified',
-        properties: [
-          { key: 'po_no', type: 'string', value: 'PO-20240326-001', isRequired: true },
-          { key: 'supplier_code', type: 'string', value: 'SUP-001', isRequired: true },
-          { key: 'material_id', type: 'string', value: 'CAT-NMC811', isRequired: true },
-          { key: 'po_qty', type: 'float', value: 10000, unit: 'kg', isRequired: true },
-          { key: 'delivery_date', type: 'string', value: '2024-04-05', isRequired: true },
-          { key: 'unit_price', type: 'float', value: 150, unit: 'CNY/kg', isRequired: true },
-          { key: 'total_amount', type: 'computed', formula: 'po_qty * unit_price', unit: 'CNY', isRequired: true },
-        ],
-      },
-      {
-        id: 'vendor_contract',
-        type: 'Object_Type',
-        displayName: '供应商合同',
-        icon: 'truck',
-        status: 'verified',
-        properties: [
-          { key: 'contract_no', type: 'string', value: 'VC-2024-001', isRequired: true },
-          { key: 'supplier_code', type: 'string', value: 'SUP-001', isRequired: true },
-          { key: 'contract_value', type: 'computed', formula: 'sum(orders.value)', unit: 'USD', isRequired: true },
-          { key: 'start_date', type: 'string', value: '2024-01-01', isRequired: true },
-          { key: 'end_date', type: 'string', value: '2024-12-31', isRequired: true },
-        ],
-      },
-    ],
-    children: [],
+    id: 'lib-mtbf-target',
+    name: '平均故障间隔时间',
+    description: '关键设备MTBF不低于720小时',
+    type: 'maintenance',
+    category: 'hard',
+    expression: 'mtbf >= 720',
+    applicableDomains: ['cap'],
+    parameters: ['mtbf']
   },
+  {
+    id: 'lib-cycle-time',
+    name: '节拍时间上限',
+    description: '工序节拍时间不超过标准值',
+    type: 'efficiency',
+    category: 'soft',
+    expression: 'cycle_time <= standard_time',
+    applicableDomains: ['cap', 'mfg', 'prod'],
+    parameters: ['cycle_time', 'standard_time']
+  },
+  {
+    id: 'lab-production-batch-size',
+    name: '生产批次大小',
+    description: '生产批次大小需符合经济批量要求',
+    type: 'batch_control',
+    category: 'business',
+    expression: 'batch_size >= min_batch AND batch_size <= max_batch',
+    applicableDomains: ['mfg', 'prod'],
+    parameters: ['batch_size', 'min_batch', 'max_batch']
+  }
 ];
+
+// ============================================================================
+// 本体节点类型库 - 用于创建新节点时选择
+// ============================================================================
+interface NodeTypeLibraryItem {
+  id: string;
+  name: string;
+  domain: string;
+  domainName: string;
+  icon: string;
+  description: string;
+  defaultProperties: Array<{ key: string; value: any; unit?: string; type?: string }>;
+}
+
+// 节点类型库
+const nodeTypeLibrary: NodeTypeLibraryItem[] = [
+  // 组织资源域
+  { id: 'type-company', name: '公司', domain: 'org', domainName: '组织资源域', icon: 'building', description: '集团/公司实体', defaultProperties: [{ key: 'code', value: '', type: 'string' }, { key: 'name', value: '', type: 'string' }] },
+  { id: 'type-base', name: '制造基地', domain: 'org', domainName: '组织资源域', icon: 'building', description: '生产制造基地', defaultProperties: [{ key: 'base_code', value: '', type: 'string' }, { key: 'location', value: '', type: 'string' }] },
+  { id: 'type-factory', name: '工厂', domain: 'org', domainName: '组织资源域', icon: 'factory', description: '生产工厂', defaultProperties: [{ key: 'factory_code', value: '', type: 'string' }, { key: 'capacity', value: 0, unit: 'GWh', type: 'number' }] },
+  { id: 'type-workshop', name: '车间', domain: 'org', domainName: '组织资源域', icon: 'layers', description: '生产车间', defaultProperties: [{ key: 'workshop_code', value: '', type: 'string' }, { key: 'area', value: 0, unit: '㎡', type: 'number' }] },
+  { id: 'type-employee', name: '员工', domain: 'org', domainName: '组织资源域', icon: 'activity', description: '企业员工', defaultProperties: [{ key: 'employee_code', value: '', type: 'string' }, { key: 'name', value: '', type: 'string' }] },
+
+  // 产能设备域
+  { id: 'type-line', name: '产线', domain: 'cap', domainName: '产能设备域', icon: 'activity', description: '生产线', defaultProperties: [{ key: 'line_code', value: '', type: 'string' }, { key: 'oee_target', value: 85, unit: '%', type: 'number' }] },
+  { id: 'type-station', name: '工位', domain: 'cap', domainName: '产能设备域', icon: 'activity', description: '生产工位', defaultProperties: [{ key: 'station_code', value: '', type: 'string' }, { key: 'cycle_time', value: 0, unit: '秒', type: 'number' }] },
+  { id: 'type-equipment', name: '设备', domain: 'cap', domainName: '产能设备域', icon: 'cpu', description: '生产设备', defaultProperties: [{ key: 'equipment_code', value: '', type: 'string' }, { key: 'model', value: '', type: 'string' }] },
+
+  // 产品工艺域
+  { id: 'type-product', name: '产品型号', domain: 'prod', domainName: '产品工艺域', icon: 'battery', description: '产品型号', defaultProperties: [{ key: 'model_code', value: '', type: 'string' }, { key: 'capacity', value: 0, unit: 'Ah', type: 'number' }] },
+  { id: 'type-process', name: '工序', domain: 'prod', domainName: '产品工艺域', icon: 'layers', description: '工艺工序', defaultProperties: [{ key: 'process_code', value: '', type: 'string' }, { key: 'std_time', value: 0, unit: '秒', type: 'number' }] },
+
+  // 供应链域
+  { id: 'type-supplier', name: '供应商', domain: 'supply', domainName: '供应链域', icon: 'truck', description: '供应商', defaultProperties: [{ key: 'supplier_code', value: '', type: 'string' }, { key: 'name', value: '', type: 'string' }] },
+  { id: 'type-material', name: '物料', domain: 'supply', domainName: '供应链域', icon: 'box', description: '原材料/物料', defaultProperties: [{ key: 'material_code', value: '', type: 'string' }, { key: 'name', value: '', type: 'string' }] },
+  { id: 'type-warehouse', name: '仓库', domain: 'supply', domainName: '供应链域', icon: 'building', description: '仓库', defaultProperties: [{ key: 'warehouse_code', value: '', type: 'string' }, { key: 'type', value: '原材料仓', type: 'string' }] },
+
+  // 生产执行域
+  { id: 'type-order', name: '生产工单', domain: 'mfg', domainName: '生产执行域', icon: 'file-code', description: '生产工单', defaultProperties: [{ key: 'order_no', value: '', type: 'string' }, { key: 'qty', value: 0, unit: '件', type: 'number' }] },
+  { id: 'type-wip', name: '在制品', domain: 'mfg', domainName: '生产执行域', icon: 'box', description: '在制品', defaultProperties: [{ key: 'wip_no', value: '', type: 'string' }, { key: 'status', value: '加工中', type: 'string' }] },
+
+  // 质量管理域
+  { id: 'type-inspection', name: '检验项', domain: 'quality', domainName: '质量管理域', icon: 'shield', description: '质量检验项', defaultProperties: [{ key: 'item_code', value: '', type: 'string' }, { key: 'std_value', value: '', type: 'string' }] },
+  { id: 'type-defect', name: '缺陷类型', domain: 'quality', domainName: '质量管理域', icon: 'x', description: '缺陷类型', defaultProperties: [{ key: 'defect_code', value: '', type: 'string' }, { key: 'severity', value: '一般', type: 'string' }] },
+
+  // 销售客户域
+  { id: 'type-customer', name: '客户', domain: 'sales', domainName: '销售客户域', icon: 'activity', description: '客户', defaultProperties: [{ key: 'customer_code', value: '', type: 'string' }, { key: 'name', value: '', type: 'string' }] },
+  { id: 'type-sales-order', name: '销售订单', domain: 'sales', domainName: '销售客户域', icon: 'file-code', description: '销售订单', defaultProperties: [{ key: 'so_no', value: '', type: 'string' }, { key: 'qty', value: 0, unit: '件', type: 'number' }] },
+
+  // 项目管理域
+  { id: 'type-project', name: '研发项目', domain: 'project', domainName: '项目管理域', icon: 'git-branch', description: '研发项目', defaultProperties: [{ key: 'project_code', value: '', type: 'string' }, { key: 'phase', value: '开发中', type: 'string' }] },
+
+  // 成本财务域
+  { id: 'type-cost-center', name: '成本中心', domain: 'cost', domainName: '成本财务域', icon: 'activity', description: '成本中心', defaultProperties: [{ key: 'cc_code', value: '', type: 'string' }, { key: 'budget', value: 0, unit: '元', type: 'number' }] },
+];
+
+// ============================================================================
+// 9大域本体实体定义 - 60+核心实体
+// ============================================================================
+
+const createEntity = (
+  id: string,
+  displayName: string,
+  domain: string,
+  domainName: string,
+  icon: string,
+  description: string,
+  properties: Array<{ key: string; value: any; unit?: string; type?: string }>,
+  extra: Partial<OntologyEntity> = {}
+): OntologyEntity => ({
+  id,
+  displayName,
+  type: 'Object_Type',
+  status: 'active',
+  icon,
+  description,
+  properties,
+  domain,
+  domainName,
+  version: '1.0.0',
+  namespace: `${domain}.${id}`,
+  tags: [domainName],
+  created_at: '2024-01-15T10:00:00Z',
+  updated_at: '2024-03-20T14:30:00Z',
+  created_by: '系统管理员',
+  metadata: {},
+  ...extra,
+});
+
+// ===== 1. 组织资源域 (Organization) =====
+const orgEntities: OntologyEntity[] = [
+  createEntity('company', '集团公司', 'org', '组织资源域', 'building', '集团总部', [
+    { key: 'company_code', value: 'CATL', type: 'string' },
+    { key: 'company_name', value: '宁德时代', type: 'string' },
+    { key: 'established', value: '2011', type: 'string' },
+  ], { metadata: { employees: 100000, factories: 13 } }),
+
+  createEntity('base_hq', '宁德基地', 'org', '组织资源域', 'building', '总部制造基地', [
+    { key: 'base_code', value: 'BASE-NB', type: 'string' },
+    { key: 'location', value: '福建宁德', type: 'string' },
+    { key: 'total_area', value: 500000, unit: '㎡', type: 'number' },
+    { key: 'total_capacity', value: 370, unit: 'GWh/年', type: 'number' },
+    { key: 'employee_count', value: 15000, unit: '人', type: 'number' },
+    { key: 'utilization_rate', value: 85, unit: '%', type: 'number' },
+  ], {
+    metadata: { certifications: 'ISO9001,IATF16949,ISO14001', planning_capacity_2025: '500GWh' }
+  }),
+
+  createEntity('factory_a', '极片工厂', 'org', '组织资源域', 'factory', '前段极片制造工厂', [
+    { key: 'factory_code', value: 'FAC-A', type: 'string' },
+    { key: 'factory_type', value: '极片工厂', type: 'string' },
+    { key: 'process_segment', value: '前段', type: 'string' },
+    { key: 'annual_capacity', value: 120, unit: 'GWh', type: 'number' },
+    { key: 'workshop_count', value: 4, unit: '个', type: 'number' },
+    { key: 'line_count', value: 32, unit: '条', type: 'number' },
+  ], { parent_id: 'base_hq', dependencies: ['base_hq'] }),
+
+  createEntity('factory_b', '电芯工厂', 'org', '组织资源域', 'factory', '中段电芯组装工厂', [
+    { key: 'factory_code', value: 'FAC-B', type: 'string' },
+    { key: 'factory_type', value: '电芯工厂', type: 'string' },
+    { key: 'process_segment', value: '中段', type: 'string' },
+    { key: 'annual_capacity', value: 150, unit: 'GWh', type: 'number' },
+    { key: 'workshop_count', value: 6, unit: '个', type: 'number' },
+    { key: 'line_count', value: 48, unit: '条', type: 'number' },
+  ], { parent_id: 'base_hq', dependencies: ['base_hq', 'factory_a'] }),
+
+  createEntity('factory_c', '模组PACK工厂', 'org', '组织资源域', 'factory', '后段模组PACK工厂', [
+    { key: 'factory_code', value: 'FAC-C', type: 'string' },
+    { key: 'factory_type', value: '模组PACK工厂', type: 'string' },
+    { key: 'process_segment', value: '后段', type: 'string' },
+    { key: 'annual_capacity', value: 100, unit: 'GWh', type: 'number' },
+    { key: 'workshop_count', value: 3, unit: '个', type: 'number' },
+    { key: 'line_count', value: 24, unit: '条', type: 'number' },
+  ], { parent_id: 'base_hq', dependencies: ['base_hq', 'factory_b'] }),
+
+  createEntity('workshop_front', '前段车间', 'org', '组织资源域', 'layers', '极片制造车间', [
+    { key: 'workshop_code', value: 'WS-FRONT-01', type: 'string' },
+    { key: 'workshop_type', value: '前段车间', type: 'string' },
+    { key: 'area', value: 25000, unit: '㎡', type: 'number' },
+    { key: 'cleanliness', value: '十万级', type: 'string' },
+    { key: 'line_count', value: 8, unit: '条', type: 'number' },
+  ], { parent_id: 'factory_a' }),
+
+  createEntity('workshop_middle', '中段车间', 'org', '组织资源域', 'layers', '电芯组装车间', [
+    { key: 'workshop_code', value: 'WS-MID-01', type: 'string' },
+    { key: 'workshop_type', value: '中段车间', type: 'string' },
+    { key: 'area', value: 35000, unit: '㎡', type: 'number' },
+    { key: 'cleanliness', value: '万级', type: 'string' },
+    { key: 'line_count', value: 8, unit: '条', type: 'number' },
+  ], { parent_id: 'factory_b' }),
+
+  createEntity('workshop_back', '后段车间', 'org', '组织资源域', 'layers', '化成PACK车间', [
+    { key: 'workshop_code', value: 'WS-BACK-01', type: 'string' },
+    { key: 'workshop_type', value: '后段车间', type: 'string' },
+    { key: 'area', value: 20000, unit: '㎡', type: 'number' },
+    { key: 'line_count', value: 8, unit: '条', type: 'number' },
+  ], { parent_id: 'factory_c' }),
+
+  createEntity('employee', '员工', 'org', '组织资源域', 'activity', '企业员工', [
+    { key: 'employee_code', value: 'EMP001', type: 'string' },
+    { key: 'name', value: '张三', type: 'string' },
+    { key: 'department', value: '前段车间', type: 'string' },
+    { key: 'skill_level', value: '高级', type: 'string' },
+  ]),
+
+  createEntity('work_team', '生产班组', 'org', '组织资源域', 'activity', '生产作业班组', [
+    { key: 'team_code', value: 'TEAM-A01', type: 'string' },
+    { key: 'team_name', value: '前段一班组', type: 'string' },
+    { key: 'member_count', value: 12, unit: '人', type: 'number' },
+    { key: 'shift', value: '白班', type: 'string' },
+  ]),
+
+  createEntity('shift', '班次', 'org', '组织资源域', 'activity', '生产班次定义', [
+    { key: 'shift_code', value: 'DAY', type: 'string' },
+    { key: 'shift_name', value: '白班', type: 'string' },
+    { key: 'start_time', value: '08:00', type: 'string' },
+    { key: 'end_time', value: '20:00', type: 'string' },
+    { key: 'effective_hours', value: 11, unit: '小时', type: 'number' },
+  ]),
+];
+
+// ===== 2. 产能设备域 (Capacity) =====
+const capEntities: OntologyEntity[] = [
+  createEntity('production_line', '生产线', 'cap', '产能设备域', 'cpu', '制造产线', [
+    { key: 'line_code', value: 'L-A01-001', type: 'string' },
+    { key: 'line_type', value: '涂布线', type: 'string' },
+    { key: 'status', value: '运行中', type: 'string' },
+    { key: 'max_capacity', value: 102, unit: 'k片/天', type: 'number' },
+    { key: 'rated_speed', value: 60, unit: 'm/min', type: 'number' },
+    { key: 'oee_target', value: 85, unit: '%', type: 'number' },
+    { key: 'current_oee', value: 82, unit: '%', type: 'number' },
+  ], { parent_id: 'workshop_front' }),
+
+  createEntity('workstation', '工位', 'cap', '产能设备域', 'activity', '具体作业工位', [
+    { key: 'station_code', value: 'WS-001', type: 'string' },
+    { key: 'station_name', value: '涂布工位', type: 'string' },
+    { key: 'cycle_time', value: 45, unit: '秒', type: 'number' },
+    { key: 'automation_level', value: '全自动', type: 'string' },
+    { key: 'operator_count', value: 2, unit: '人', type: 'number' },
+  ], { parent_id: 'production_line' }),
+
+  createEntity('equipment', '关键设备', 'cap', '产能设备域', 'cpu', '生产设备', [
+    { key: 'equipment_code', value: 'EQ-TB-001', type: 'string' },
+    { key: 'equipment_name', value: '涂布机-001', type: 'string' },
+    { key: 'equipment_type', value: '涂布机', type: 'string' },
+    { key: 'manufacturer', value: '先导智能', type: 'string' },
+    { key: 'max_speed', value: 80, unit: 'm/min', type: 'number' },
+    { key: 'availability', value: 95, unit: '%', type: 'number' },
+    { key: 'mtbf', value: 720, unit: '小时', type: 'number' },
+  ], { parent_id: 'workstation' }),
+
+  createEntity('mold', '模具', 'cap', '产能设备域', 'box', '生产模具', [
+    { key: 'mold_code', value: 'MOLD-001', type: 'string' },
+    { key: 'mold_type', value: '极片模', type: 'string' },
+    { key: 'max_shots', value: 1000000, unit: '次', type: 'number' },
+    { key: 'current_shots', value: 500000, unit: '次', type: 'number' },
+    { key: 'status', value: '在用', type: 'string' },
+  ]),
+];
+
+// ===== 3. 产品工艺域 (Product) =====
+const prodEntities: OntologyEntity[] = [
+  createEntity('product_family', '产品系列', 'prod', '产品工艺域', 'layers', '产品族', [
+    { key: 'family_code', value: 'LFP-ESS', type: 'string' },
+    { key: 'family_name', value: '磷酸铁锂储能系列', type: 'string' },
+    { key: 'application', value: '储能', type: 'string' },
+    { key: 'cell_type', value: '方形铝壳', type: 'string' },
+  ]),
+
+  createEntity('product_model_lfp', 'LFP-280Ah', 'prod', '产品工艺域', 'battery', '储能电芯型号', [
+    { key: 'model_code', value: 'LFP-280Ah', type: 'string' },
+    { key: 'nominal_capacity', value: 280, unit: 'Ah', type: 'number' },
+    { key: 'nominal_voltage', value: 3.2, unit: 'V', type: 'number' },
+    { key: 'energy_density', value: 170, unit: 'Wh/kg', type: 'number' },
+    { key: 'cycle_life', value: 8000, unit: '次', type: 'number' },
+    { key: 'production_lead_time', value: 14, unit: '天', type: 'number' },
+  ], { metadata: { application: '储能系统', certifications: 'UN38.3,IEC62619' } }),
+
+  createEntity('product_model_ncm', 'NCM-150Ah', 'prod', '产品工艺域', 'battery', '动力电芯型号', [
+    { key: 'model_code', value: 'NCM-150Ah', type: 'string' },
+    { key: 'nominal_capacity', value: 150, unit: 'Ah', type: 'number' },
+    { key: 'nominal_voltage', value: 3.7, unit: 'V', type: 'number' },
+    { key: 'energy_density', value: 250, unit: 'Wh/kg', type: 'number' },
+    { key: 'cycle_life', value: 2000, unit: '次', type: 'number' },
+    { key: 'production_lead_time', value: 12, unit: '天', type: 'number' },
+  ], { metadata: { application: '电动汽车', certifications: 'UN38.3,GB38031' } }),
+
+  createEntity('process_route', '工艺路线', 'prod', '产品工艺域', 'git-branch', '制造工艺路线', [
+    { key: 'route_code', value: 'ROUTE-LFP-001', type: 'string' },
+    { key: 'version', value: 'V3.2', type: 'string' },
+    { key: 'process_count', value: 15, unit: '道', type: 'number' },
+    { key: 'total_ct', value: 480, unit: '秒', type: 'number' },
+    { key: 'yield_target', value: 98.5, unit: '%', type: 'number' },
+  ]),
+
+  createEntity('process_step', '工序', 'prod', '产品工艺域', 'activity', '工艺工序', [
+    { key: 'step_code', value: 'STEP-001', type: 'string' },
+    { key: 'step_name', value: '正极搅拌', type: 'string' },
+    { key: 'sequence', value: 1, unit: '序', type: 'number' },
+    { key: 'standard_time', value: 240, unit: '分钟', type: 'number' },
+    { key: 'is_quality_gate', value: true, type: 'boolean' },
+  ]),
+
+  createEntity('bom', '物料清单', 'prod', '产品工艺域', 'box', '产品BOM', [
+    { key: 'bom_code', value: 'BOM-LFP-280', type: 'string' },
+    { key: 'version', value: 'V2.1', type: 'string' },
+    { key: 'component_count', value: 28, unit: '种', type: 'number' },
+    { key: 'material_cost', value: 680, unit: '元/只', type: 'number' },
+  ]),
+];
+
+// ===== 4. 供应链域 (Supply) =====
+const supplyEntities: OntologyEntity[] = [
+  createEntity('supplier', '供应商', 'supply', '供应链域', 'truck', '物料供应商', [
+    { key: 'supplier_code', value: 'SUP-001', type: 'string' },
+    { key: 'supplier_name', value: '材料科技集团', type: 'string' },
+    { key: 'supplier_type', value: '战略', type: 'string' },
+    { key: 'supply_category', value: '正极材料', type: 'string' },
+    { key: 'monthly_capacity', value: 5000, unit: '吨', type: 'number' },
+    { key: 'lead_time', value: 15, unit: '天', type: 'number' },
+    { key: 'quality_rating', value: 'A', type: 'string' },
+  ]),
+
+  createEntity('material_category', '物料分类', 'supply', '供应链域', 'layers', '物料分类', [
+    { key: 'category_code', value: 'CAT-01', type: 'string' },
+    { key: 'category_name', value: '正极材料', type: 'string' },
+    { key: 'category_level', value: 1, unit: '级', type: 'number' },
+  ]),
+
+  createEntity('material', '物料', 'supply', '供应链域', 'box', '物料主数据', [
+    { key: 'material_code', value: 'RM-CATH-001', type: 'string' },
+    { key: 'material_name', value: '磷酸铁锂正极材料', type: 'string' },
+    { key: 'specification', value: 'LFP-STD', type: 'string' },
+    { key: 'unit', value: '吨', type: 'string' },
+    { key: 'safety_stock', value: 500, unit: '吨', type: 'number' },
+    { key: 'shelf_life', value: 365, unit: '天', type: 'number' },
+  ]),
+
+  createEntity('warehouse', '仓库', 'supply', '供应链域', 'box', '仓储设施', [
+    { key: 'warehouse_code', value: 'WH-001', type: 'string' },
+    { key: 'warehouse_name', value: '原材料仓A', type: 'string' },
+    { key: 'warehouse_type', value: '原材料仓', type: 'string' },
+    { key: 'capacity', value: 10000, unit: '托', type: 'number' },
+    { key: 'utilization', value: 75, unit: '%', type: 'number' },
+    { key: 'temperature_zone', value: '常温', type: 'string' },
+  ], { parent_id: 'base_hq' }),
+
+  createEntity('location', '库位', 'supply', '供应链域', 'activity', '仓库库位', [
+    { key: 'location_code', value: 'LOC-A-01-01', type: 'string' },
+    { key: 'zone', value: 'A区', type: 'string' },
+    { key: 'aisle', value: '01', type: 'string' },
+    { key: 'shelf', value: '01', type: 'string' },
+    { key: 'layer', value: '01', type: 'string' },
+    { key: 'location_type', value: '存储', type: 'string' },
+  ], { parent_id: 'warehouse' }),
+
+  createEntity('inventory', '库存', 'supply', '供应链域', 'database', '库存记录', [
+    { key: 'inventory_id', value: 'INV-001', type: 'string' },
+    { key: 'batch_no', value: 'LOT-20240320', type: 'string' },
+    { key: 'quantity', value: 800, unit: '吨', type: 'number' },
+    { key: 'status', value: '合格', type: 'string' },
+    { key: 'receipt_date', value: '2024-03-20', type: 'string' },
+  ], { parent_id: 'location' }),
+
+  createEntity('purchase_order', '采购订单', 'supply', '供应链域', 'file-code', '采购订单', [
+    { key: 'po_no', value: 'PO-2024-001', type: 'string' },
+    { key: 'order_date', value: '2024-03-01', type: 'string' },
+    { key: 'delivery_date', value: '2024-03-20', type: 'string' },
+    { key: 'total_amount', value: 5000000, unit: '元', type: 'number' },
+    { key: 'status', value: '已收货', type: 'string' },
+  ]),
+];
+
+// ===== 5. 生产执行域 (Mfg) =====
+const mfgEntities: OntologyEntity[] = [
+  createEntity('production_plan', '生产计划', 'mfg', '生产执行域', 'file-code', '主生产计划MPS', [
+    { key: 'plan_no', value: 'MPS-2024-04', type: 'string' },
+    { key: 'plan_period', value: '2024年4月', type: 'string' },
+    { key: 'planned_quantity', value: 150000, unit: '只', type: 'number' },
+    { key: 'capacity_allocation', value: 85, unit: '%', type: 'number' },
+  ]),
+
+  createEntity('work_order', '生产工单', 'mfg', '生产执行域', 'file-code', '生产执行工单', [
+    { key: 'wo_no', value: 'WO-2024-0001', type: 'string' },
+    { key: 'planned_quantity', value: 52000, unit: '只', type: 'number' },
+    { key: 'actual_quantity', value: 48000, unit: '只', type: 'number' },
+    { key: 'planned_start', value: '2024-04-01', type: 'string' },
+    { key: 'planned_end', value: '2024-04-30', type: 'string' },
+    { key: 'status', value: '生产中', type: 'string' },
+  ]),
+
+  createEntity('wip', '在制品', 'mfg', '生产执行域', 'activity', '在制品跟踪', [
+    { key: 'wip_id', value: 'WIP-001', type: 'string' },
+    { key: 'quantity', value: 1000, unit: '只', type: 'number' },
+    { key: 'wip_status', value: '加工中', type: 'string' },
+    { key: 'enter_time', value: '2024-04-01T08:00:00Z', type: 'string' },
+  ]),
+
+  createEntity('production_record', '生产记录', 'mfg', '生产执行域', 'check-circle', '生产报工记录', [
+    { key: 'record_id', value: 'REC-001', type: 'string' },
+    { key: 'good_quantity', value: 950, unit: '只', type: 'number' },
+    { key: 'defect_quantity', value: 50, unit: '只', type: 'number' },
+    { key: 'record_time', value: '2024-04-01T16:00:00Z', type: 'string' },
+  ]),
+
+  createEntity('capacity_requirement', '产能需求', 'mfg', '生产执行域', 'activity', 'CRP产能需求', [
+    { key: 'crp_no', value: 'CRP-2024-04-001', type: 'string' },
+    { key: 'required_capacity', value: 720, unit: '小时', type: 'number' },
+    { key: 'available_capacity', value: 800, unit: '小时', type: 'number' },
+    { key: 'load_rate', value: 90, unit: '%', type: 'number' },
+  ]),
+];
+
+// ===== 6. 质量管理域 (Quality) =====
+const qualityEntities: OntologyEntity[] = [
+  createEntity('quality_standard', '质量标准', 'quality', '质量管理域', 'shield', '产品质量标准', [
+    { key: 'standard_code', value: 'QS-LFP-001', type: 'string' },
+    { key: 'standard_name', value: '储能电芯质量标准V3.0', type: 'string' },
+    { key: 'check_item_count', value: 56, unit: '项', type: 'number' },
+    { key: 'aql_level', value: 0.4, unit: '%', type: 'number' },
+    { key: 'cpk_target', value: 1.67, type: 'number' },
+  ]),
+
+  createEntity('check_item', '检查项', 'quality', '质量管理域', 'check-circle', '质量检查项', [
+    { key: 'item_code', value: 'CI-001', type: 'string' },
+    { key: 'item_name', value: '容量测试', type: 'string' },
+    { key: 'check_type', value: '计量', type: 'string' },
+    { key: 'standard_value', value: 280, type: 'number' },
+    { key: 'upper_limit', value: 285, type: 'number' },
+    { key: 'lower_limit', value: 275, type: 'number' },
+    { key: 'unit', value: 'Ah', type: 'string' },
+  ]),
+
+  createEntity('iqc_record', '来料检验', 'quality', '质量管理域', 'check-circle', '来料检验记录', [
+    { key: 'iqc_no', value: 'IQC-2024-001', type: 'string' },
+    { key: 'batch_no', value: 'LOT-20240320', type: 'string' },
+    { key: 'sample_size', value: 32, unit: '件', type: 'number' },
+    { key: 'accept_count', value: 32, unit: '件', type: 'number' },
+    { key: 'result', value: '合格', type: 'string' },
+  ]),
+
+  createEntity('ipqc_record', '过程检验', 'quality', '质量管理域', 'check-circle', '过程检验记录', [
+    { key: 'ipqc_no', value: 'IPQC-2024-001', type: 'string' },
+    { key: 'check_value', value: 278.5, type: 'number' },
+    { key: 'result', value: '合格', type: 'string' },
+  ]),
+
+  createEntity('defect', '缺陷记录', 'quality', '质量管理域', 'alert-triangle', '质量缺陷', [
+    { key: 'defect_id', value: 'DEF-001', type: 'string' },
+    { key: 'defect_type', value: '外观不良', type: 'string' },
+    { key: 'severity', value: '轻微', type: 'string' },
+    { key: 'quantity', value: 50, unit: '只', type: 'number' },
+    { key: 'disposition', value: '返工', type: 'string' },
+  ]),
+];
+
+// ===== 7. 销售客户域 (Sales) =====
+const salesEntities: OntologyEntity[] = [
+  createEntity('customer', '客户', 'sales', '销售客户域', 'activity', '客户主数据', [
+    { key: 'customer_code', value: 'CUST-001', type: 'string' },
+    { key: 'customer_name', value: '储能科技A公司', type: 'string' },
+    { key: 'customer_type', value: '战略', type: 'string' },
+    { key: 'industry', value: '储能', type: 'string' },
+    { key: 'credit_limit', value: 100000000, unit: '元', type: 'number' },
+  ]),
+
+  createEntity('sales_order', '销售订单', 'sales', '销售客户域', 'file-code', '客户订单', [
+    { key: 'so_no', value: 'SO-2024-0001', type: 'string' },
+    { key: 'order_date', value: '2024-03-01', type: 'string' },
+    { key: 'delivery_date', value: '2024-05-15', type: 'string' },
+    { key: 'total_amount', value: 45000000, unit: '元', type: 'number' },
+    { key: 'priority', value: '高', type: 'string' },
+    { key: 'status', value: '生产中', type: 'string' },
+  ]),
+
+  createEntity('delivery', '发货单', 'sales', '销售客户域', 'truck', '销售发货', [
+    { key: 'delivery_no', value: 'DN-2024-001', type: 'string' },
+    { key: 'delivery_date', value: '2024-05-10', type: 'string' },
+    { key: 'carrier', value: '顺丰物流', type: 'string' },
+    { key: 'tracking_no', value: 'SF123456789', type: 'string' },
+    { key: 'status', value: '已发货', type: 'string' },
+  ]),
+];
+
+// ===== 8. 项目管理域 (Project) =====
+const projectEntities: OntologyEntity[] = [
+  createEntity('rd_project', '研发项目', 'project', '项目管理域', 'activity', '产品研发项目', [
+    { key: 'project_code', value: 'RD-2024-001', type: 'string' },
+    { key: 'project_name', value: '新一代储能电芯研发', type: 'string' },
+    { key: 'project_type', value: '新产品', type: 'string' },
+    { key: 'start_date', value: '2024-01-01', type: 'string' },
+    { key: 'end_date', value: '2024-12-31', type: 'string' },
+    { key: 'budget', value: 50000000, unit: '元', type: 'number' },
+    { key: 'status', value: '进行中', type: 'string' },
+  ]),
+
+  createEntity('trial_production', '试产记录', 'project', '项目管理域', 'activity', '新产品试产', [
+    { key: 'trial_no', value: 'TR-2024-001', type: 'string' },
+    { key: 'trial_phase', value: '中试', type: 'string' },
+    { key: 'trial_date', value: '2024-06-01', type: 'string' },
+    { key: 'trial_quantity', value: 1000, unit: '只', type: 'number' },
+    { key: 'yield_rate', value: 92, unit: '%', type: 'number' },
+    { key: 'result', value: '通过', type: 'string' },
+  ]),
+];
+
+// ===== 9. 成本财务域 (Cost) =====
+const costEntities: OntologyEntity[] = [
+  createEntity('cost_center', '成本中心', 'cost', '成本财务域', 'activity', '成本中心', [
+    { key: 'cc_code', value: 'CC-001', type: 'string' },
+    { key: 'cc_name', value: '前段车间成本中心', type: 'string' },
+    { key: 'cc_type', value: '生产', type: 'string' },
+    { key: 'budget', value: 100000000, unit: '元', type: 'number' },
+  ]),
+
+  createEntity('product_cost', '产品成本', 'cost', '成本财务域', 'activity', '产品成本核算', [
+    { key: 'cost_id', value: 'COST-001', type: 'string' },
+    { key: 'cost_period', value: '2024年4月', type: 'string' },
+    { key: 'material_cost', value: 680, unit: '元/只', type: 'number' },
+    { key: 'labor_cost', value: 50, unit: '元/只', type: 'number' },
+    { key: 'overhead_cost', value: 120, unit: '元/只', type: 'number' },
+    { key: 'total_cost', value: 850, unit: '元/只', type: 'number' },
+  ]),
+];
+
+// 合并所有域
+const allEntities: OntologyEntity[] = [
+  ...orgEntities,
+  ...capEntities,
+  ...prodEntities,
+  ...supplyEntities,
+  ...mfgEntities,
+  ...qualityEntities,
+  ...salesEntities,
+  ...projectEntities,
+  ...costEntities,
+];
+
+// 构建域结构
+const initialDomains: OntologyDomain[] = [
+  { id: 'dom-org', name: 'Organization', displayName: '组织资源域', icon: 'building', description: '企业组织架构、人员、班组、技能', entities: orgEntities },
+  { id: 'dom-cap', name: 'Capacity', displayName: '产能设备域', icon: 'cpu', description: '产线、工位、设备、模具', entities: capEntities },
+  { id: 'dom-prod', name: 'Product', displayName: '产品工艺域', icon: 'battery', description: '产品型号、BOM、工艺路线、工序', entities: prodEntities },
+  { id: 'dom-supply', name: 'SupplyChain', displayName: '供应链域', icon: 'truck', description: '供应商、物料、仓库、库位、库存', entities: supplyEntities },
+  { id: 'dom-mfg', name: 'Manufacturing', displayName: '生产执行域', icon: 'activity', description: '生产计划、工单、在制品', entities: mfgEntities },
+  { id: 'dom-quality', name: 'Quality', displayName: '质量管理域', icon: 'shield', description: '质量标准、检验记录、缺陷', entities: qualityEntities },
+  { id: 'dom-sales', name: 'Sales', displayName: '销售客户域', icon: 'file-code', description: '客户、销售订单、发货', entities: salesEntities },
+  { id: 'dom-project', name: 'Project', displayName: '项目管理域', icon: 'git-branch', description: '研发项目、试产、技改', entities: projectEntities },
+  { id: 'dom-cost', name: 'Cost', displayName: '成本财务域', icon: 'database', description: '成本中心、成本核算', entities: costEntities },
+];
+
+// ============================================================================
+// Palantir本体论 - 完整关系类型系统
+//
+// 关系类型分类：
+// - structural: 结构关系（包含、组成、分类）
+// - flow: 流程关系（转化、消耗、产生、流动）
+// - control: 控制关系（管控、分配、执行、操作）
+// - temporal: 时间关系（先于、后于、并发）
+// - causal: 因果关系（导致、源于、影响）
+// - reference: 引用关系（参考、映射、关联）
+// ============================================================================
 
 const initialLinks: OntologyLink[] = [
-  // ==================== 原材料 -> 工序 (consumed_by) ====================
-  // 正极材料 -> 搅拌
-  { id: 'link_001', source: 'cathode_active', target: 'mixing_process', relation: 'consumed_by', cardinality: 'N:1' },
-  { id: 'link_002', source: 'conductive_additive', target: 'mixing_process', relation: 'consumed_by', cardinality: 'N:1' },
-  { id: 'link_003', source: 'binder', target: 'mixing_process', relation: 'consumed_by', cardinality: 'N:1' },
-  // 负极材料 -> 搅拌
-  { id: 'link_004', source: 'anode_graphite', target: 'mixing_process', relation: 'consumed_by', cardinality: 'N:1' },
-  // 其他材料 -> 工序
-  { id: 'link_005', source: 'electrolyte', target: 'electrolyte_filling', relation: 'consumed_by', cardinality: 'N:1' },
-  { id: 'link_006', source: 'separator', target: 'winding_process', relation: 'consumed_by', cardinality: 'N:1' },
-  { id: 'link_007', source: 'current_collector', target: 'coating_process', relation: 'consumed_by', cardinality: 'N:1' },
+  // ==================== 组织层级关系 (structural) ====================
+  { id: 'l001', source: 'company', target: 'base_hq', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '公司包含基地', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
+  { id: 'l002', source: 'base_hq', target: 'factory_a', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含工厂', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
+  { id: 'l003', source: 'base_hq', target: 'factory_b', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含工厂', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
+  { id: 'l004', source: 'base_hq', target: 'factory_c', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含工厂', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
+  { id: 'l005', source: 'base_hq', target: 'warehouse', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含仓库', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '设施'] },
+  { id: 'l006', source: 'factory_a', target: 'workshop_front', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '工厂包含车间', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '设施'] },
+  { id: 'l007', source: 'factory_b', target: 'workshop_middle', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '工厂包含车间', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '设施'] },
+  { id: 'l008', source: 'factory_c', target: 'workshop_back', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '工厂包含车间', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '设施'] },
+  { id: 'l009', source: 'work_team', target: 'employee', relation: 'includes', relationType: 'structural', cardinality: '1:N', description: '班组包含员工', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['成员', '组织'] },
 
-  // ==================== 工序流程 (precedes) ====================
-  { id: 'link_010', source: 'mixing_process', target: 'coating_process', relation: 'precedes', cardinality: '1:1' },
-  { id: 'link_011', source: 'coating_process', target: 'calendering_process', relation: 'precedes', cardinality: '1:1' },
-  { id: 'link_012', source: 'calendering_process', target: 'slitting_process', relation: 'precedes', cardinality: '1:1' },
-  { id: 'link_013', source: 'slitting_process', target: 'winding_process', relation: 'precedes', cardinality: '1:1' },
-  { id: 'link_014', source: 'winding_process', target: 'electrolyte_filling', relation: 'precedes', cardinality: '1:1' },
-  { id: 'link_015', source: 'electrolyte_filling', target: 'formation_process', relation: 'precedes', cardinality: '1:1' },
-  { id: 'link_016', source: 'formation_process', target: 'aging_process', relation: 'precedes', cardinality: '1:1' },
+  // ==================== 资源分配关系 (control) ====================
+  { id: 'l010', source: 'workshop_front', target: 'work_team', relation: 'assigns', relationType: 'control', cardinality: '1:N', description: '车间分配班组', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['调度', '人力'] },
+  { id: 'l011', source: 'shift', target: 'work_team', relation: 'scheduled_as', relationType: 'temporal', cardinality: '1:N', description: '班次排程班组', properties: { strength: 'conditional', direction: 'directed', temporality: 'transient' }, semantics: ['排程', '时间'] },
 
-  // ==================== 设备 -> 工序 (assigned_to) ====================
-  { id: 'link_020', source: 'mixing_equipment', target: 'mixing_process', relation: 'assigned_to', cardinality: '1:N' },
-  { id: 'link_021', source: 'coating_machine', target: 'coating_process', relation: 'assigned_to', cardinality: '1:N' },
-  { id: 'link_022', source: 'winding_machine', target: 'winding_process', relation: 'assigned_to', cardinality: '1:N' },
-  { id: 'link_023', source: 'formation_equipment', target: 'formation_process', relation: 'assigned_to', cardinality: '1:N' },
-  { id: 'link_024', source: 'testing_equipment', target: 'qc_inspection', relation: 'assigned_to', cardinality: '1:N' },
+  // ==================== 产能资源关系 (structural + control) ====================
+  { id: 'l101', source: 'workshop_front', target: 'production_line', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '车间包含产线', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '产能'] },
+  { id: 'l102', source: 'production_line', target: 'workstation', relation: 'composed_of', relationType: 'structural', cardinality: '1:N', description: '产线由工位组成', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['组成', '产能'] },
+  { id: 'l103', source: 'workstation', target: 'equipment', relation: 'equipped_with', relationType: 'structural', cardinality: '1:N', description: '工位配备设备', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['配备', '资源'] },
+  { id: 'l104', source: 'equipment', target: 'mold', relation: 'requires', relationType: 'control', cardinality: '1:N', description: '设备需要模具', properties: { strength: 'conditional', direction: 'directed', temporality: 'transient' }, semantics: ['依赖', '资源'] },
+  { id: 'l105', source: 'work_team', target: 'production_line', relation: 'operates', relationType: 'control', cardinality: 'N:N', description: '班组操作产线', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['操作', '执行'] },
+  { id: 'l106', source: 'employee', target: 'skill', relation: 'possesses', relationType: 'structural', cardinality: 'N:N', description: '员工拥有技能', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['能力', '资质'] },
+  { id: 'l107', source: 'workstation', target: 'skill', relation: 'requires', relationType: 'control', cardinality: 'N:N', description: '工位需要技能', properties: { strength: 'conditional', direction: 'directed', temporality: 'persistent' }, semantics: ['能力', '要求'] },
 
-  // ==================== 仓储关系 (contains/stored_in) ====================
-  { id: 'link_030', source: 'raw_warehouse', target: 'cathode_active', relation: 'contains', cardinality: '1:N' },
-  { id: 'link_031', source: 'raw_warehouse', target: 'anode_graphite', relation: 'contains', cardinality: '1:N' },
-  { id: 'link_032', source: 'raw_warehouse', target: 'electrolyte', relation: 'contains', cardinality: '1:N' },
-  { id: 'link_033', source: 'raw_warehouse', target: 'separator', relation: 'contains', cardinality: '1:N' },
-  { id: 'link_034', source: 'wip_inventory', target: 'cell_prismatic', relation: 'contains', cardinality: '1:N' },
-  { id: 'link_035', source: 'finished_goods_wh', target: 'battery_module', relation: 'contains', cardinality: '1:N' },
-  { id: 'link_036', source: 'finished_goods_wh', target: 'battery_pack', relation: 'contains', cardinality: '1:N' },
+  // ==================== 产品工艺关系 (structural + flow) ====================
+  { id: 'l201', source: 'product_family', target: 'product_model_lfp', relation: 'classifies', relationType: 'structural', cardinality: '1:N', description: '系列分类型号', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['分类', '产品'] },
+  { id: 'l202', source: 'product_family', target: 'product_model_ncm', relation: 'classifies', relationType: 'structural', cardinality: '1:N', description: '系列分类型号', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['分类', '产品'] },
+  { id: 'l203', source: 'product_model_lfp', target: 'process_route', relation: 'defined_by', relationType: 'reference', cardinality: '1:1', description: '型号由工艺路线定义', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['定义', '工艺'] },
+  { id: 'l204', source: 'product_model_lfp', target: 'bom', relation: 'structured_by', relationType: 'structural', cardinality: '1:1', description: '型号由BOM结构化', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['结构', '物料'] },
+  { id: 'l205', source: 'process_route', target: 'process_step', relation: 'sequenced_as', relationType: 'temporal', cardinality: '1:N', description: '工艺路线排序为工序', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['序列', '工艺'] },
+  { id: 'l206', source: 'process_step', target: 'workstation', relation: 'executed_at', relationType: 'control', cardinality: 'N:1', description: '工序执行于工位', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['执行', '位置'] },
+  { id: 'l207', source: 'process_step', target: 'process_step', relation: 'precedes', relationType: 'temporal', cardinality: '1:1', description: '工序先后顺序', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['先后', '流程'] },
+  { id: 'l208', source: 'product_model_lfp', target: 'quality_standard', relation: 'governed_by', relationType: 'control', cardinality: '1:N', description: '型号受质量标准管控', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['管控', '质量'] },
+  { id: 'l209', source: 'bom', target: 'material', relation: 'comprises', relationType: 'structural', cardinality: '1:N', description: 'BOM由物料组成', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['组成', '物料'] },
 
-  // ==================== 质量检验 (inspects/result) ====================
-  { id: 'link_040', source: 'qc_inspection', target: 'cell_prismatic', relation: 'inspects', cardinality: '1:N' },
-  { id: 'link_041', source: 'ipqc_check', target: 'coating_process', relation: 'monitors', cardinality: '1:N' },
-  { id: 'link_042', source: 'oqc_inspection', target: 'battery_pack', relation: 'validates', cardinality: '1:N' },
-  { id: 'link_043', source: 'test_data', target: 'qc_inspection', relation: 'generated_by', cardinality: 'N:1' },
-  { id: 'link_044', source: 'defect_record', target: 'qc_inspection', relation: 'belongs_to', cardinality: 'N:1' },
+  // ==================== 供应链关系 (structural + flow) ====================
+  { id: 'l301', source: 'supplier', target: 'material', relation: 'supplies', relationType: 'flow', cardinality: '1:N', description: '供应商供货', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['供应', '物流'] },
+  { id: 'l302', source: 'material_category', target: 'material', relation: 'categorizes', relationType: 'structural', cardinality: '1:N', description: '分类归类物料', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['分类', '物料'] },
+  { id: 'l303', source: 'material', target: 'inventory', relation: 'stored_as', relationType: 'structural', cardinality: '1:N', description: '物料存储为库存', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['存储', '库存'] },
+  { id: 'l304', source: 'warehouse', target: 'location', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '仓库包含库位', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '存储'] },
+  { id: 'l305', source: 'location', target: 'inventory', relation: 'holds', relationType: 'structural', cardinality: '1:N', description: '库位存放库存', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['存放', '库存'] },
+  { id: 'l306', source: 'purchase_order', target: 'material', relation: 'requests', relationType: 'flow', cardinality: 'N:N', description: '订单采购物料', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['请求', '采购'] },
+  { id: 'l307', source: 'purchase_order', target: 'supplier', relation: 'placed_to', relationType: 'control', cardinality: 'N:1', description: '订单下达给供应商', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['下达', '采购'] },
+  { id: 'l308', source: 'inventory', target: 'work_order', relation: 'issued_to', relationType: 'flow', cardinality: 'N:N', description: '库存发放给工单', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['发放', '物料'] },
 
-  // ==================== 产品结构 (part_of/composes) ====================
-  { id: 'link_050', source: 'cell_cylindrical', target: 'battery_module', relation: 'part_of', cardinality: 'N:1' },
-  { id: 'link_051', source: 'cell_prismatic', target: 'battery_module', relation: 'part_of', cardinality: 'N:1' },
-  { id: 'link_052', source: 'battery_module', target: 'battery_pack', relation: 'part_of', cardinality: 'N:1' },
+  // ==================== 生产执行关系 (flow + temporal + causal) ====================
+  // 需求驱动关系
+  { id: 'l401', source: 'customer', target: 'sales_order', relation: 'generates', relationType: 'causal', cardinality: '1:N', description: '客户产生需求', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['需求', '源头'] },
+  { id: 'l402', source: 'sales_order', target: 'production_plan', relation: 'drives', relationType: 'causal', cardinality: '1:N', description: '订单驱生计划', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['驱动', '计划'] },
+  { id: 'l403', source: 'production_plan', target: 'work_order', relation: 'decomposes_into', relationType: 'structural', cardinality: '1:N', description: '计划分解为工单', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['分解', '计划'] },
+  { id: 'l404', source: 'production_plan', target: 'capacity_requirement', relation: 'generates', relationType: 'causal', cardinality: '1:N', description: '计划产生产能需求', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['需求', '产能'] },
+  { id: 'l405', source: 'capacity_requirement', target: 'workshop_front', relation: 'allocated_to', relationType: 'control', cardinality: 'N:1', description: '产能需求分配给车间', properties: { strength: 'conditional', direction: 'directed', temporality: 'transient' }, semantics: ['分配', '产能'] },
 
-  // ==================== 供应链关系 (supplies/orders) ====================
-  { id: 'link_060', source: 'supplier', target: 'cathode_active', relation: 'supplies', cardinality: '1:N' },
-  { id: 'link_061', source: 'supplier', target: 'anode_graphite', relation: 'supplies', cardinality: '1:N' },
-  { id: 'link_062', source: 'purchase_order', target: 'supplier', relation: 'placed_to', cardinality: 'N:1' },
-  { id: 'link_063', source: 'purchase_order', target: 'raw_warehouse', relation: 'delivers_to', cardinality: '1:1' },
-  { id: 'link_064', source: 'customer_order', target: 'battery_pack', relation: 'orders', cardinality: '1:N' },
-  { id: 'link_065', source: 'customer_order', target: 'customer_info', relation: 'placed_by', cardinality: 'N:1' },
-  { id: 'link_066', source: 'delivery_plan', target: 'customer_order', relation: 'fulfills', cardinality: '1:N' },
-  { id: 'link_067', source: 'material_transfer', target: 'wip_inventory', relation: 'moves_to', cardinality: '1:1' },
+  // 工单执行关系
+  { id: 'l406', source: 'work_order', target: 'production_line', relation: 'routed_to', relationType: 'control', cardinality: 'N:1', description: '工单路由到产线', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['路由', '排产'] },
+  { id: 'l407', source: 'work_order', target: 'wip', relation: 'creates', relationType: 'causal', cardinality: '1:N', description: '工单创建在制品', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['创建', '在制'] },
+  { id: 'l408', source: 'wip', target: 'material', relation: 'consumes', relationType: 'flow', cardinality: 'N:N', description: '在制品消耗物料', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['消耗', '物料'] },
+  { id: 'l409', source: 'wip', target: 'process_step', relation: 'progresses_through', relationType: 'temporal', cardinality: 'N:1', description: '在制品流转工序', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['流转', '工艺'] },
+  { id: 'l410', source: 'wip', target: 'workstation', relation: 'located_at', relationType: 'reference', cardinality: 'N:1', description: '在制品位于工位', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['位置', '追踪'] },
+  { id: 'l411', source: 'wip', target: 'semi_finished', relation: 'transforms_into', relationType: 'flow', cardinality: '1:1', description: '在制品转化为半成品', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['转化', '形态'] },
+  { id: 'l412', source: 'semi_finished', target: 'finished_goods', relation: 'assembles_into', relationType: 'flow', cardinality: 'N:1', description: '半成品组装为成品', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['组装', '成品'] },
+  { id: 'l413', source: 'production_record', target: 'wip', relation: 'documents', relationType: 'reference', cardinality: 'N:1', description: '生产记录文档化在制品', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['记录', '追溯'] },
+  { id: 'l414', source: 'production_record', target: 'work_order', relation: 'fulfills', relationType: 'flow', cardinality: 'N:1', description: '生产记录履行工单', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['履行', '报工'] },
 
-  // ==================== 维保关系 (maintains) ====================
-  { id: 'link_070', source: 'maintenance_record', target: 'mixing_equipment', relation: 'maintains', cardinality: 'N:1' },
-  { id: 'link_071', source: 'maintenance_record', target: 'coating_machine', relation: 'maintains', cardinality: 'N:1' },
-  { id: 'link_072', source: 'vendor_contract', target: 'supplier', relation: 'contracts', cardinality: '1:1' },
+  // ==================== 质量关系 (control + causal) ====================
+  { id: 'l501', source: 'quality_standard', target: 'check_item', relation: 'specifies', relationType: 'control', cardinality: '1:N', description: '标准指定检查项', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['规范', '标准'] },
+  { id: 'l502', source: 'iqc_record', target: 'material', relation: 'evaluates', relationType: 'control', cardinality: 'N:1', description: '来料检验物料', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['评估', '来料'] },
+  { id: 'l503', source: 'iqc_record', target: 'inventory', relation: 'determines_status', relationType: 'control', cardinality: '1:1', description: '检验决定库存状态', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['判定', '状态'] },
+  { id: 'l504', source: 'ipqc_record', target: 'wip', relation: 'monitors', relationType: 'control', cardinality: 'N:1', description: '过程检验监控在制品', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['监控', '过程'] },
+  { id: 'l505', source: 'oqc_record', target: 'finished_goods', relation: 'certifies', relationType: 'control', cardinality: '1:1', description: '出货检验认证成品', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['认证', '出货'] },
+  { id: 'l506', source: 'defect', target: 'wip', relation: 'originates_from', relationType: 'causal', cardinality: 'N:1', description: '缺陷源于在制品', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['来源', '缺陷'] },
+  { id: 'l507', source: 'defect', target: 'process_step', relation: 'discovered_at', relationType: 'reference', cardinality: 'N:1', description: '缺陷发现于工序', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['发现', '位置'] },
+  { id: 'l508', source: 'defect', target: 'equipment', relation: 'caused_by', relationType: 'causal', cardinality: 'N:1', description: '缺陷由设备导致', properties: { strength: 'conditional', direction: 'directed', temporality: 'persistent' }, semantics: ['原因', '设备'] },
+  { id: 'l509', source: 'quality_alert', target: 'defect', relation: 'triggered_by', relationType: 'causal', cardinality: '1:N', description: '预警由缺陷触发', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['触发', '预警'] },
+  { id: 'l510', source: 'corrective_action', target: 'defect', relation: 'addresses', relationType: 'control', cardinality: '1:1', description: '纠正措施处理缺陷', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['处理', '纠正'] },
+
+  // ==================== 销售关系 (flow + causal) ====================
+  { id: 'l601', source: 'customer', target: 'sales_order', relation: 'places', relationType: 'flow', cardinality: '1:N', description: '客户下订单', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['下单', '销售'] },
+  { id: 'l602', source: 'sales_order', target: 'product_model_lfp', relation: 'requests', relationType: 'flow', cardinality: 'N:1', description: '订单请求型号', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['请求', '产品'] },
+  { id: 'l603', source: 'sales_order', target: 'delivery', relation: 'fulfilled_by', relationType: 'flow', cardinality: '1:N', description: '订单由发货单履行', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['履行', '物流'] },
+  { id: 'l604', source: 'delivery', target: 'finished_goods', relation: 'ships', relationType: 'flow', cardinality: '1:N', description: '发货单发运成品', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['发运', '物流'] },
+  { id: 'l605', source: 'customer', target: 'customer_complaint', relation: 'files', relationType: 'causal', cardinality: '1:N', description: '客户提交投诉', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['投诉', '服务'] },
+
+  // ==================== 项目关系 (temporal + control) ====================
+  { id: 'l701', source: 'rd_project', target: 'product_model_lfp', relation: 'develops', relationType: 'control', cardinality: '1:1', description: '项目开发产品', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['开发', '研发'] },
+  { id: 'l702', source: 'rd_project', target: 'trial_production', relation: 'includes', relationType: 'structural', cardinality: '1:N', description: '项目包含试产', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['包含', '试产'] },
+  { id: 'l703', source: 'trial_production', target: 'work_order', relation: 'consumes', relationType: 'flow', cardinality: '1:N', description: '试产使用工单', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['使用', '试产'] },
+  { id: 'l704', source: 'trial_production', target: 'ipqc_record', relation: 'generates', relationType: 'causal', cardinality: '1:N', description: '试产产生检验记录', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['产生', '验证'] },
+  { id: 'l705', source: 'process_step', target: 'trial_production', relation: 'validated_by', relationType: 'control', cardinality: 'N:N', description: '工序由试产验证', properties: { strength: 'conditional', direction: 'directed', temporality: 'transient' }, semantics: ['验证', '工艺'] },
+
+  // ==================== 成本关系 (flow + reference) ====================
+  { id: 'l801', source: 'cost_center', target: 'workshop_front', relation: 'maps_to', relationType: 'reference', cardinality: '1:1', description: '成本中心映射到车间', properties: { strength: 'strong', direction: 'bidirectional', temporality: 'persistent' }, semantics: ['映射', '成本'] },
+  { id: 'l802', source: 'product_cost', target: 'product_model_lfp', relation: 'calculated_for', relationType: 'reference', cardinality: 'N:1', description: '成本为型号计算', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['计算', '成本'] },
+  { id: 'l803', source: 'work_order', target: 'product_cost', relation: 'accumulates_to', relationType: 'flow', cardinality: 'N:1', description: '工单归集成本', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['归集', '成本'] },
+  { id: 'l804', source: 'material', target: 'product_cost', relation: 'contributes_to', relationType: 'flow', cardinality: 'N:N', description: '物料贡献成本', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['贡献', '材料成本'] },
+  { id: 'l805', source: 'equipment', target: 'product_cost', relation: 'depreciates_to', relationType: 'flow', cardinality: 'N:N', description: '设备折旧计入成本', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['折旧', '制费'] },
+  { id: 'l806', source: 'employee', target: 'product_cost', relation: 'labor_allocated_to', relationType: 'flow', cardinality: 'N:N', description: '人工成本分摊', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['人工', '成本'] },
 ];
 
-// 约束模板库
-const constraintTemplates = [
-  {
-    id: 'tmpl-capacity',
-    name: '产能限制',
-    description: '限制生产总量不超过产能上限',
-    type: 'hard' as ConstraintType,
-    expression: 'SUM(order.quantity) <= productionLine.capacity',
-    group: '产能约束',
-  },
-  {
-    id: 'tmpl-due-date',
-    name: '交期约束',
-    description: '订单必须在交期前完成',
-    type: 'hard' as ConstraintType,
-    expression: 'order.completion_time <= order.due_date',
-    group: '交期约束',
-  },
-  {
-    id: 'tmpl-resource',
-    name: '资源独占',
-    description: '同一资源同一时间只能被一个任务使用',
-    type: 'hard' as ConstraintType,
-    expression: 'NO_OVERLAP(resource.time_windows)',
-    group: '设备约束',
-  },
-  {
-    id: 'tmpl-batch',
-    name: '最小批量',
-    description: '生产批量必须满足最小批量要求',
-    type: 'soft' as ConstraintType,
-    expression: 'batch.size >= entity.min_batch_size',
-    group: '工艺约束',
-  },
-  {
-    id: 'tmpl-utilization',
-    name: '最大利用率',
-    description: '设备利用率不应超过上限',
-    type: 'objective' as ConstraintType,
-    expression: 'MAXIMIZE(resource.utilization) WHERE resource.utilization <= 0.95',
-    group: '优化目标',
-  },
-];
+// ============================================================================
+// 约束规则定义
+// ============================================================================
 
-// 初始约束数据
 const initialConstraints: Constraint[] = [
-  {
-    id: 'cons-1',
-    name: 'capacity_limit',
-    type: 'hard',
-    expression: 'SUM(order.quantity) <= line.capacity',
-    description: '产能限制约束',
-    entityId: 'cell_001',
-    priority: 1,
-    status: 'active',
-    group: '产能约束',
-    references: ['energy_density', 'capacity'],
-  },
-  {
-    id: 'cons-2',
-    name: 'quality_threshold',
-    type: 'soft',
-    expression: 'cell.energy_density >= 250',
-    description: '能量密度阈值',
-    entityId: 'cell_001',
-    priority: 2,
-    status: 'active',
-    group: '质量约束',
-    references: ['energy_density'],
-  },
+  { id: 'c001', entityId: 'factory_a', libraryItemId: 'lib-capacity-utilization', type: 'capacity_limit', category: 'capacity', expression: 'utilization_rate <= 95', description: '工厂产能利用率不得超过95%' },
+  { id: 'c002', entityId: 'production_line', libraryItemId: 'lib-oee-target', type: 'oee_target', category: 'efficiency', expression: 'current_oee >= 80', description: '产线OEE不得低于80%' },
+  { id: 'c003', entityId: 'equipment', libraryItemId: 'lib-equipment-availability', type: 'availability', category: 'maintenance', expression: 'availability >= 90', description: '设备可用率不得低于90%' },
+  { id: 'c004', entityId: 'work_order', libraryItemId: '', type: 'lead_time', category: 'delivery', expression: 'planned_end - planned_start <= 14', description: '工单周期不得超过14天' },
+  { id: 'c005', entityId: 'capacity_requirement', libraryItemId: 'lib-capacity-utilization', type: 'load_balance', category: 'capacity', expression: 'load_rate <= 95', description: '产能负荷率不得超过95%' },
+  { id: 'c006', entityId: 'process_route', libraryItemId: 'lib-quality-yield', type: 'yield_target', category: 'quality', expression: 'yield_target >= 98', description: '工艺良率目标不得低于98%' },
+  { id: 'c007', entityId: 'inventory', libraryItemId: 'lib-inventory-turnover', type: 'safety_stock', category: 'inventory', expression: 'quantity >= safety_stock', description: '库存不得低于安全库存' },
+  { id: 'c008', entityId: 'iqc_record', libraryItemId: 'lib-quality-yield', type: 'inspection', category: 'quality', expression: 'result == "合格" OR result == "特采"', description: '来料检验必须通过' },
 ];
 
-// --- Components ---
+// ============================================================================
+// 节点卡片组件
+// ============================================================================
 
-const StatusDot: React.FC<{ status: 'verified' | 'draft' | 'conflict' }> = ({ status }) => {
-  const colorMap = {
-    verified: 'var(--palantir-success)',
-    draft: 'var(--palantir-warning)',
-    conflict: 'var(--palantir-danger)',
-  };
-  return (
-    <span
-      style={{
-        width: 8,
-        height: 8,
-        borderRadius: '50%',
-        backgroundColor: colorMap[status],
-        display: 'inline-block',
-        marginRight: 6,
-        flexShrink: 0,
-      }}
-    />
-  );
-};
-
-// 连线配置组件
-interface EdgeInspectorProps {
-  edgeId: string;
-  links: OntologyLink[];
-  setLinks: React.Dispatch<React.SetStateAction<OntologyLink[]>>;
-  domains: OntologyDomain[];
-  onClose: () => void;
-}
-
-const EdgeInspector: React.FC<EdgeInspectorProps> = ({ edgeId, links, setLinks, domains, onClose }) => {
-  const link = links.find(l => l.id === edgeId);
-  if (!link) return null;
-
-  const sourceEntity = domains.flatMap(d => d.entities).find(e => e.id === link.source);
-  const targetEntity = domains.flatMap(d => d.entities).find(e => e.id === link.target);
-
-  const updateLink = (updates: Partial<OntologyLink>) => {
-    setLinks(prev => prev.map(l => l.id === edgeId ? { ...l, ...updates } : l));
-  };
-
-  const deleteLink = () => {
-    setLinks(prev => prev.filter(l => l.id !== edgeId));
-    onClose();
-  };
-
-  return (
-    <>
-      <div style={{
-        padding: '12px 16px',
-        borderBottom: '1px solid var(--palantir-border)',
-        background: '#F8F9FA',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-        <div>
-          <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 4 }}>
-            关系连线
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 600 }}>{link.relation}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-            ID: {link.id}
-          </div>
-        </div>
-        <Button minimal icon={<X size={18} />} onClick={onClose} />
-      </div>
-
-      <div style={{ padding: 16, overflow: 'auto', flex: 1 }}>
-        {/* 源节点和目标节点信息 */}
-        <Card style={{ marginBottom: 16, padding: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 12 }}>
-            连接信息
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <div style={{
-              padding: '6px 10px',
-              background: '#E3F2FD',
-              borderRadius: 4,
-              fontSize: 12,
-              fontWeight: 500,
-              color: '#1565C0',
-              flex: 1,
-            }}>
-              {sourceEntity?.displayName || link.source}
-            </div>
-            <GitBranch size={16} color="#106BA3" style={{ transform: 'rotate(90deg)' }} />
-            <div style={{
-              padding: '6px 10px',
-              background: '#E8F5E9',
-              borderRadius: 4,
-              fontSize: 12,
-              fontWeight: 500,
-              color: '#2E7D32',
-              flex: 1,
-            }}>
-              {targetEntity?.displayName || link.target}
-            </div>
-          </div>
-        </Card>
-
-        {/* 关系类型配置 */}
-        <FormGroup label="关系名称" style={{ marginBottom: 16 }}>
-          <InputGroup
-            value={link.relation}
-            onChange={(e) => updateLink({ relation: e.target.value })}
-            fill
-          />
-        </FormGroup>
-
-        <FormGroup label="关系类型" style={{ marginBottom: 16 }}>
-          <HTMLSelect
-            value={link.cardinality}
-            onChange={(e) => updateLink({ cardinality: e.target.value as any })}
-            fill
-          >
-            <option value="1:1">一对一 (1:1)</option>
-            <option value="1:N">一对多 (1:N)</option>
-            <option value="N:1">多对一 (N:1)</option>
-            <option value="N:M">多对多 (N:M)</option>
-          </HTMLSelect>
-        </FormGroup>
-
-        {/* 常用关系类型快速选择 */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
-            常用关系
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {['COMPONENTS_OF', 'USES', 'PRODUCES', 'DEPENDS_ON', 'REFERENCES', 'CONTAINS', 'BELONGS_TO', 'TRANSFORMS_TO'].map(rel => (
-              <Tag
-                key={rel}
-                minimal
-                interactive
-                onClick={() => updateLink({ relation: rel })}
-                style={{ cursor: 'pointer' }}
-              >
-                {rel}
-              </Tag>
-            ))}
-          </div>
-        </div>
-
-        <Divider style={{ margin: '16px 0' }} />
-
-        {/* 删除按钮 */}
-        <Button
-          fill
-          intent="danger"
-          minimal
-          icon={<Trash2 size={14} />}
-          onClick={deleteLink}
-        >
-          删除此连线
-        </Button>
-      </div>
-    </>
-  );
-};
-
-// 节点卡片组件 - Handle放在框的边缘
 const OntologyNodeCard: React.FC<{ data: OntologyEntity }> = ({ data }) => {
   return (
-    <div className="ontology-node" style={{ position: 'relative' }}>
-      {/* 左侧连接点 - 在框的左边缘 */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        style={{
-          left: -6,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          width: 10,
-          height: 10,
-          background: 'var(--accent)',
-          border: '2px solid #fff',
-        }}
-      />
-
-      <div className="ontology-node-header">
-        <StatusDot status={data.status} />
-        {data.icon === 'battery' && <Battery size={14} />}
-        {data.icon === 'layers' && <Layers size={14} />}
-        {data.icon === 'box' && <Box size={14} />}
-        {data.icon === 'truck' && <Truck size={14} />}
-        <span style={{ fontWeight: 600, fontSize: 12 }}>{data.displayName}</span>
+    <div className="ontology-node-palantir">
+      <Handle type="target" position={Position.Left} style={{ left: -5, top: '50%', transform: 'translateY(-50%)', width: 8, height: 8, background: '#3b82f6', border: '1.5px solid #1e293b' }} />
+      <div className="ontology-node-header-palantir">
+        <div className={`status-indicator ${data.status}`} />
+        {data.icon === 'battery' && <Battery size={12} />}
+        {data.icon === 'layers' && <Layers size={12} />}
+        {data.icon === 'box' && <Box size={12} />}
+        {data.icon === 'truck' && <Truck size={12} />}
+        {data.icon === 'factory' && <Factory size={12} />}
+        {data.icon === 'cpu' && <Cpu size={12} />}
+        {data.icon === 'shield' && <Shield size={12} />}
+        {data.icon === 'file-code' && <FileCode size={12} />}
+        {data.icon === 'alert-triangle' && <AlertTriangle size={12} />}
+        {data.icon === 'activity' && <Activity size={12} />}
+        {data.icon === 'database' && <Database size={12} />}
+        {data.icon === 'git-branch' && <GitBranch size={12} />}
+        {data.icon === 'check-circle' && <div className="w-3 h-3 rounded-full bg-green-500" />}
+        <span className="node-title">{data.displayName}</span>
       </div>
-      <div className="ontology-node-content">
-        {data.properties.slice(0, 3).map((prop) => (
-          <div key={prop.key} className="property-row">
-            <span className="property-key">{prop.key}</span>
-            <span className="property-value">
-              {prop.value !== undefined ? prop.value : '—'}
-              {prop.unit && <span style={{ marginLeft: 2, color: 'var(--text-tertiary)' }}>{prop.unit}</span>}
+      <div className="ontology-node-content-palantir">
+        <div className="domain-tag">{data.domainName}</div>
+        {data.properties.slice(0, 2).map((prop) => (
+          <div key={prop.key} className="property-row-palantir">
+            <span className="property-key-palantir">{prop.key}</span>
+            <span className="property-value-palantir">
+              {prop.value !== undefined ? String(prop.value) : '—'}
+              {prop.unit && <span className="property-unit">{prop.unit}</span>}
             </span>
           </div>
         ))}
-        {data.properties.length > 3 && (
-          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', textAlign: 'center', paddingTop: 4 }}>
-            +{data.properties.length - 3} 更多
-          </div>
+        {data.properties.length > 2 && (
+          <div className="more-properties">+{data.properties.length - 2}</div>
         )}
       </div>
-
-      {/* 右侧连接点 - 在框的右边缘 */}
-      <Handle
-        type="source"
-        position={Position.Right}
-        style={{
-          right: -6,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          width: 10,
-          height: 10,
-          background: 'var(--accent)',
-          border: '2px solid #fff',
-        }}
-      />
+      <Handle type="source" position={Position.Right} style={{ right: -5, top: '50%', transform: 'translateY(-50%)', width: 8, height: 8, background: '#3b82f6', border: '1.5px solid #1e293b' }} />
     </div>
   );
 };
 
-const nodeTypes = {
-  ontologyNode: OntologyNodeCard,
-};
+const nodeTypes = { ontologyNode: OntologyNodeCard };
 
-// --- Main Component ---
+const StatusIndicator: React.FC<{ status: string }> = ({ status }) => (
+  <div
+    className="status-indicator"
+    style={{
+      width: 6,
+      height: 6,
+      borderRadius: '50%',
+      backgroundColor: status === 'active' ? '#10b981' : status === 'draft' ? '#f59e0b' : '#64748b',
+      flexShrink: 0,
+    }}
+  />
+);
+
+// ============================================================================
+// 主组件
+// ============================================================================
 
 export default function OntologyStudio({ onNavigate }: { onNavigate: (page: string) => void }) {
-  const [domains, setDomains] = useState<OntologyDomain[]>(initialDomains);
-  const [links, setLinks] = useState<OntologyLink[]>(initialLinks);
-  const [constraints, setConstraints] = useState<Constraint[]>(initialConstraints);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [domains] = useState<OntologyDomain[]>(initialDomains);
+  const [links] = useState<OntologyLink[]>(initialLinks);
   const [selectedEntity, setSelectedEntity] = useState<OntologyEntity | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'logic' | 'data' | 'perms'>('general');
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['dom-1']));
+  const [activeTab, setActiveTab] = useState<'general' | 'relations' | 'constraints'>('general');
 
-  // 当前选中的domain路径
-  const [selectedDomainPath, setSelectedDomainPath] = useState<string>('Manufacturing');
-
-  // React Flow States
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
-
-  // 添加实体弹窗状态
-  const [showAddEntityDialog, setShowAddEntityDialog] = useState(false);
-  const [newEntityName, setNewEntityName] = useState('');
-  const [newEntityType, setNewEntityType] = useState<'Object_Type' | 'Relation_Type' | 'Attribute_Type'>('Object_Type');
-
-  // 约束相关状态
+  // 约束管理状态
+  const [constraints, setConstraints] = useState<Constraint[]>(initialConstraints);
   const [selectedConstraint, setSelectedConstraint] = useState<Constraint | null>(null);
+  const [showAddConstraintDialog, setShowAddConstraintDialog] = useState(false);
+  const [selectedLibraryItem, setSelectedLibraryItem] = useState<ConstraintLibraryItem | null>(null);
+
+  // DSL模式
   const [dslMode, setDslMode] = useState(false);
-  const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
-  const [showValidationPanel, setShowValidationPanel] = useState(false);
-  const [isSimulating, setIsSimulating] = useState(false);
 
-  // --- 智能约束模板推荐状态 ---
-  const [recommendedTemplates, setRecommendedTemplates] = useState<GeneratedConstraintTemplate[]>([]);
-  const [showRecommendedTemplates, setShowRecommendedTemplates] = useState(false);
-  const [generatedAST, setGeneratedAST] = useState<ConstraintAST | null>(null);
-  const [solverMapping, setSolverMapping] = useState<SolverMapping | null>(null);
-  const [showASTPanel, setShowASTPanel] = useState(false);
+  // 节点管理状态 - 用于动态添加新实体
+  const [customEntities, setCustomEntities] = useState<OntologyEntity[]>([]);
+  const [showAddNodeDialog, setShowAddNodeDialog] = useState(false);
+  const [selectedNodeType, setSelectedNodeType] = useState<NodeTypeLibraryItem | null>(null);
+  const [newNodeConfig, setNewNodeConfig] = useState<{
+    id: string;
+    displayName: string;
+    properties: Array<{ key: string; value: any; unit?: string; type?: string }>;
+    parentId: string;
+    status: 'active' | 'draft' | 'deprecated';
+    tags: string[];
+  }>({ id: '', displayName: '', properties: [], parentId: '', status: 'active', tags: [] });
 
-  // Initialize canvas from domain data
-  useEffect(() => {
-    const allEntities = domains.flatMap((d) => [
-      ...d.entities,
-      ...(d.children?.flatMap((c) => c.entities) || []),
-      ...(d.children?.flatMap((c) => c.children?.flatMap((gc) => gc.entities) || []) || []),
-    ]);
+  // 新节点关系配置 - 创建节点时同时建立关系
+  const [newNodeRelations, setNewNodeRelations] = useState<Array<{
+    targetId: string;
+    relation: string;
+    relationType: 'structural' | 'flow' | 'control' | 'temporal' | 'causal' | 'reference';
+    description: string;
+  }>>([]);
 
-    const flowNodes: Node[] = allEntities.map((entity, idx) => ({
-      id: entity.id,
-      type: 'ontologyNode',
-      position: { x: entity.x || 100 + idx * 250, y: entity.y || 100 + (idx % 2) * 200 },
-      data: entity,
-    }));
+  // 新节点约束配置 - 创建节点时同时应用约束
+  const [newNodeConstraints, setNewNodeConstraints] = useState<string[]>([]);
 
-    const flowEdges: Edge[] = links.map((link) => {
-      const isSelected = selectedEdgeId === link.id;
-      return {
-        id: link.id,
-        source: link.source,
-        target: link.target,
-        label: link.relation,
-        type: 'smoothstep',
-        markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: isSelected ? 'var(--accent)' : '#86868B' },
-        style: {
-          stroke: isSelected ? 'var(--accent)' : '#86868B',
-          strokeWidth: isSelected ? 3 : 1.5,
-        },
-        labelStyle: { fill: isSelected ? 'var(--accent)' : '#5C7080', fontSize: 10, fontWeight: isSelected ? 600 : 400 },
-        labelBgStyle: { fill: '#FFFFFF', stroke: isSelected ? 'var(--accent)' : '#86868B', strokeWidth: isSelected ? 2 : 1, rx: 2 },
-        labelBgPadding: [4, 6],
-      };
-    });
+  // 关系管理状态 - 用于添加实体间关联
+  const [customLinks, setCustomLinks] = useState<OntologyLink[]>([]);
+  const [showAddRelationDialog, setShowAddRelationDialog] = useState(false);
+  const [relationConfig, setRelationConfig] = useState<{
+    source: string;
+    target: string;
+    relation: string;
+    relationType: 'structural' | 'flow' | 'control' | 'temporal' | 'causal' | 'reference';
+    description: string;
+  }>({
+    source: '',
+    target: '',
+    relation: '',
+    relationType: 'structural',
+    description: ''
+  });
 
-    setNodes(flowNodes);
-    setEdges(flowEdges);
-  }, [domains, links, selectedEdgeId]);
+  // 合并基础实体和自定义实体
+  const allEntities = useMemo(() => {
+    return [...initialDomains.flatMap(d => d.entities), ...customEntities];
+  }, [customEntities]);
 
-  // Handle node selection
-  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    setSelectedNodeId(node.id);
-    setSelectedEntity(node.data as OntologyEntity);
-    setSelectedEdgeId(null); // 清除选中的线段
-  }, []);
+  // 合并基础关系和自定义关系
+  const allLinks = useMemo(() => {
+    return [...links, ...customLinks];
+  }, [customLinks]);
 
-  // Handle edge selection
-  const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
-    setSelectedEdgeId(edge.id);
-    setSelectedNodeId(null);
-    setSelectedEntity(null);
-  }, []);
-
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      if (connection.source && connection.target) {
-        const newLink: OntologyLink = {
-          id: `link_${Date.now()}`,
-          source: connection.source,
-          target: connection.target,
-          relation: 'RELATED_TO',
-          cardinality: '1:N',
-        };
-        setLinks((prev) => [...prev, newLink]);
-        setEdges((eds) => addEdge({
-          ...connection,
-          type: 'smoothstep',
-          markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: '#86868B' },
-          style: { stroke: '#86868B', strokeWidth: 1.5 },
-        }, eds));
-      }
-    },
-    [setEdges]
-  );
-
-  // Tree rendering logic
-  const toggleExpand = (id: string) => {
-    setExpandedNodes((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  // 根据路径找到domain
-  const findDomainByPath = (path: string, domainList: OntologyDomain[] = domains): OntologyDomain | null => {
-    for (const domain of domainList) {
-      if (domain.path === path) return domain;
-      if (domain.children) {
-        const found = findDomainByPath(path, domain.children);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
-
-  // 添加实体到指定domain
-  const addEntityToDomain = (domainPath: string, entity: OntologyEntity) => {
-    setDomains((prev) => {
-      const newDomains = JSON.parse(JSON.stringify(prev)) as OntologyDomain[];
-
-      const findAndAdd = (domainList: OntologyDomain[]): boolean => {
-        for (const domain of domainList) {
-          if (domain.path === domainPath) {
-            domain.entities.push(entity);
-            return true;
-          }
-          if (domain.children && findAndAdd(domain.children)) {
-            return true;
-          }
-        }
-        return false;
-      };
-
-      findAndAdd(newDomains);
-      return newDomains;
-    });
-  };
-
-  // 处理添加实体
-  const handleAddEntity = () => {
-    if (!newEntityName.trim()) return;
+  // 从节点类型库创建新实体
+  const createNewEntity = () => {
+    if (!selectedNodeType || !newNodeConfig.id || !newNodeConfig.displayName) return;
 
     const newEntity: OntologyEntity = {
-      id: `entity_${Date.now()}`,
-      type: newEntityType,
-      displayName: newEntityName,
-      icon: newEntityType === 'Object_Type' ? 'box' : newEntityType === 'Relation_Type' ? 'layers' : 'battery',
-      status: 'draft',
-      properties: [],
+      id: newNodeConfig.id,
+      displayName: newNodeConfig.displayName,
+      type: 'Object_Type',
+      status: newNodeConfig.status,
+      icon: selectedNodeType.icon,
+      description: selectedNodeType.description,
+      properties: newNodeConfig.properties,
+      domain: selectedNodeType.domain,
+      domainName: selectedNodeType.domainName,
+      version: '1.0.0',
+      namespace: `${selectedNodeType.domain}.${newNodeConfig.id}`,
+      tags: [selectedNodeType.domainName, ...newNodeConfig.tags],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      created_by: '当前用户',
+      parent_id: newNodeConfig.parentId || undefined,
+      metadata: {}
     };
 
-    addEntityToDomain(selectedDomainPath, newEntity);
-    setShowAddEntityDialog(false);
-    setNewEntityName('');
+    // 1. 添加实体
+    setCustomEntities([...customEntities, newEntity]);
+
+    // 2. 创建配置的关系
+    if (newNodeRelations.length > 0) {
+      const newLinks: OntologyLink[] = newNodeRelations.map(rel => ({
+        id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        source: newEntity.id,
+        target: rel.targetId,
+        relation: rel.relation,
+        relationType: rel.relationType,
+        cardinality: '1:N',
+        description: rel.description,
+        properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }
+      }));
+      setCustomLinks([...customLinks, ...newLinks]);
+    }
+
+    // 3. 创建父节点关系（如果配置了父节点）
+    if (newNodeConfig.parentId) {
+      const parentLink: OntologyLink = {
+        id: `link-parent-${Date.now()}`,
+        source: newNodeConfig.parentId,
+        target: newEntity.id,
+        relation: 'contains',
+        relationType: 'structural',
+        cardinality: '1:N',
+        description: `${allEntities.find(e => e.id === newNodeConfig.parentId)?.displayName || '父节点'} 包含 ${newEntity.displayName}`,
+        properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }
+      };
+      setCustomLinks(prev => [...prev, parentLink]);
+    }
+
+    // 4. 应用配置的约束
+    if (newNodeConstraints.length > 0) {
+      const newConstraints: Constraint[] = newNodeConstraints.map(constraintId => {
+        const libItem = constraintLibrary.find(c => c.id === constraintId)!;
+        return {
+          id: `cons-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          entityId: newEntity.id,
+          libraryItemId: constraintId,
+          type: libItem.type,
+          category: libItem.category,
+          expression: libItem.expression,
+          description: libItem.description
+        };
+      });
+      setConstraints([...constraints, ...newConstraints]);
+    }
+
+    // 5. 重置状态
+    setShowAddNodeDialog(false);
+    setSelectedNodeType(null);
+    setNewNodeConfig({ id: '', displayName: '', properties: [], parentId: '', status: 'active', tags: [] });
+    setNewNodeRelations([]);
+    setNewNodeConstraints([]);
   };
 
-  // ============ 约束操作方法 ============
+  // 删除自定义实体
+  const deleteCustomEntity = (entityId: string) => {
+    setCustomEntities(customEntities.filter(e => e.id !== entityId));
+    // 同时删除相关的约束和关系
+    setConstraints(constraints.filter(c => c.entityId !== entityId));
+    setCustomLinks(customLinks.filter(l => l.source !== entityId && l.target !== entityId));
+    if (selectedEntity?.id === entityId) {
+      setSelectedEntity(null);
+      setSelectedNodeId(null);
+    }
+  };
 
-  const addConstraint = () => {
+  // 创建新关系
+  const createNewRelation = () => {
+    if (!relationConfig.source || !relationConfig.target || !relationConfig.relation) return;
+
+    const newLink: OntologyLink = {
+      id: `link-${Date.now()}`,
+      source: relationConfig.source,
+      target: relationConfig.target,
+      relation: relationConfig.relation,
+      relationType: relationConfig.relationType,
+      cardinality: '1:N',
+      description: relationConfig.description,
+      properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }
+    };
+
+    setCustomLinks([...customLinks, newLink]);
+    setShowAddRelationDialog(false);
+    setRelationConfig({
+      source: '',
+      target: '',
+      relation: '',
+      relationType: 'structural',
+      description: ''
+    });
+  };
+
+  // 删除自定义关系
+  const deleteCustomLink = (linkId: string) => {
+    setCustomLinks(customLinks.filter(l => l.id !== linkId));
+  };
+
+  // 从约束库添加约束到当前实体
+  const addConstraintFromLibrary = (libraryItem: ConstraintLibraryItem) => {
     if (!selectedEntity) return;
     const newConstraint: Constraint = {
       id: `cons-${Date.now()}`,
-      name: 'new_constraint',
-      type: 'hard',
-      expression: '',
-      description: '',
       entityId: selectedEntity.id,
-      priority: 1,
-      status: 'active',
-      group: '未分组',
-      references: [],
+      libraryItemId: libraryItem.id,
+      type: libraryItem.type,
+      category: libraryItem.category,
+      expression: libraryItem.expression,
+      description: libraryItem.description,
     };
     setConstraints([...constraints, newConstraint]);
-    setSelectedConstraint(newConstraint);
+    setShowAddConstraintDialog(false);
+    setSelectedLibraryItem(null);
   };
 
+  // 删除约束
   const deleteConstraint = (constraintId: string) => {
     setConstraints(constraints.filter(c => c.id !== constraintId));
     if (selectedConstraint?.id === constraintId) {
@@ -1578,6 +1164,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
     }
   };
 
+  // 更新约束
   const updateConstraint = (constraintId: string, updates: Partial<Constraint>) => {
     setConstraints(constraints.map(c => c.id === constraintId ? { ...c, ...updates } : c));
     if (selectedConstraint?.id === constraintId) {
@@ -1585,1259 +1172,1236 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
     }
   };
 
-  const updateEntity = (entityId: string, updates: Partial<OntologyEntity>) => {
-    setDomains(domains.map(domain => ({
-      ...domain,
-      entities: domain.entities.map(e => e.id === entityId ? { ...e, ...updates } : e),
-      children: domain.children?.map(child => ({
-        ...child,
-        entities: child.entities.map(e => e.id === entityId ? { ...e, ...updates } : e),
-        children: child.children?.map(grandchild => ({
-          ...grandchild,
-          entities: grandchild.entities.map(e => e.id === entityId ? { ...e, ...updates } : e),
-        })),
-      })),
-    })));
-    if (selectedEntity?.id === entityId) {
-      setSelectedEntity({ ...selectedEntity, ...updates });
-    }
-  };
-
-  const applyTemplate = (template: typeof constraintTemplates[0]) => {
-    if (!selectedEntity) return;
-    const newConstraint: Constraint = {
-      id: `cons-${Date.now()}`,
-      name: template.name,
-      type: template.type,
-      expression: template.expression,
-      description: template.description,
-      entityId: selectedEntity.id,
-      priority: 1,
-      status: 'active',
-      group: template.group,
-      references: [],
-    };
-    setConstraints([...constraints, newConstraint]);
-    setSelectedConstraint(newConstraint);
-  };
-
-  // --- 智能约束模板推荐功能 ---
-
-  /**
-   * 根据当前选中的实体，智能推荐约束模板
-   */
-  const generateRecommendedConstraints = useCallback(() => {
-    if (!selectedEntity) {
-      setRecommendedTemplates([]);
-      return;
-    }
-
-    // 转换 OntologyEntity 为 Entity 格式
-    const entityForEngine: Entity = {
-      name: selectedEntity.displayName,
-      type: selectedEntity.type as any,
-      attributes: selectedEntity.properties.map(p => ({
-        name: p.key,
-        type: p.type as any,
-        required: p.isRequired,
-        unit: p.unit,
-        semantic: inferSemanticFromProperty(p),
-      })),
-    };
-
-    const templates = recommendConstraints(entityForEngine);
-    setRecommendedTemplates(templates);
-    setShowRecommendedTemplates(templates.length > 0);
+  // 获取适用于当前实体的约束库项
+  const getApplicableConstraints = useCallback(() => {
+    if (!selectedEntity) return [];
+    return constraintLibrary.filter(item =>
+      item.applicableDomains.includes(selectedEntity.domain)
+    );
   }, [selectedEntity]);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['dom-org']));
+  const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
 
-  // 当选中实体变化时，触发智能约束推荐
+  // React Flow States
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [focusMode, setFocusMode] = useState(false);
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+
+  // 获取相关节点（上下各一层）
+  const getRelatedNodes = useCallback((centerNodeId: string, depth: number = 1) => {
+    const relatedNodeIds = new Set<string>([centerNodeId]);
+    const relatedLinkIds = new Set<string>();
+    let currentLevel = new Set<string>([centerNodeId]);
+
+    for (let i = 0; i < depth; i++) {
+      const nextLevel = new Set<string>();
+      allLinks.forEach((link) => {
+        // 上游：link.target是center，则source是上游
+        if (currentLevel.has(link.target) && !relatedNodeIds.has(link.source)) {
+          relatedNodeIds.add(link.source);
+          relatedLinkIds.add(link.id);
+          nextLevel.add(link.source);
+        }
+        // 下游：link.source是center，则target是下游
+        if (currentLevel.has(link.source) && !relatedNodeIds.has(link.target)) {
+          relatedNodeIds.add(link.target);
+          relatedLinkIds.add(link.id);
+          nextLevel.add(link.target);
+        }
+      });
+      currentLevel = nextLevel;
+    }
+    return { nodeIds: relatedNodeIds, linkIds: relatedLinkIds };
+  }, [allLinks]);
+
+  // 初始化画布
   useEffect(() => {
-    generateRecommendedConstraints();
-  }, [selectedEntity, generateRecommendedConstraints]);
+    let displayEntities = allEntities;
+    let displayLinks = allLinks;
 
-  /**
-   * 从属性推断语义标签
-   */
-  const inferSemanticFromProperty = (prop: Property): string | undefined => {
-    const name = prop.key.toLowerCase();
-    const type = prop.type;
+    if (focusMode && focusedNodeId) {
+      const { nodeIds, linkIds } = getRelatedNodes(focusedNodeId, 1);
+      displayEntities = allEntities.filter(e => nodeIds.has(e.id));
+      displayLinks = allLinks.filter(l => linkIds.has(l.id));
 
-    // 容量相关
-    if (name.includes('capacity') && (type === 'float' || type === 'int')) {
-      return AttributeSemanticLabels.RESOURCE_CAPACITY;
-    }
-
-    // 时间相关
-    if (name.includes('start_time') || name === 'starttime') {
-      return AttributeSemanticLabels.TIME_START;
-    }
-    if (name.includes('end_time') || name === 'endtime') {
-      return AttributeSemanticLabels.TIME_END;
-    }
-    if (name.includes('duration')) {
-      return AttributeSemanticLabels.TIME_DURATION;
-    }
-
-    // 数量相关
-    if ((name.includes('quantity') || name.includes('qty')) && (type === 'float' || type === 'int')) {
-      return AttributeSemanticLabels.ORDER_QUANTITY;
-    }
-
-    // 质量相关
-    if (name.includes('quality') || name.includes('oee') || name.includes('yield')) {
-      return AttributeSemanticLabels.QUALITY_METRIC;
-    }
-
-    return undefined;
-  };
-
-  /**
-   * 应用智能推荐的模板
-   */
-  const applyRecommendedTemplate = (template: GeneratedConstraintTemplate, params?: Record<string, string>) => {
-    if (!selectedEntity) return;
-
-    // 构建实际表达式
-    let expression = template.expressionTemplate;
-    const defaultParams = params || template.quickApply?.defaultParams || {};
-
-    // 替换参数
-    Object.entries(defaultParams).forEach(([key, value]) => {
-      expression = expression.replace(new RegExp(`{${key}}`, 'g'), value);
-    });
-
-    // 生成 AST
-    let ast: ConstraintAST | undefined;
-    if (template.astTemplate) {
-      ast = { ...template.astTemplate, id: `cons-${Date.now()}` };
-      setGeneratedAST(ast);
-
-      // 生成求解器映射
-      const mapping = generateSolverMapping(ast, 'linear');
-      setSolverMapping(mapping);
-    }
-
-    const newConstraint: Constraint = {
-      id: `cons-${Date.now()}`,
-      name: template.name,
-      type: template.constraintType,
-      category: template.category as any,
-      expression: expression,
-      description: `${template.description}\n\n[自动生成] 模板: ${template.templateId}`,
-      entityId: selectedEntity.id,
-      priority: 1,
-      status: 'active',
-      group: template.category,
-      references: [],
-    };
-
-    setConstraints([...constraints, newConstraint]);
-    setSelectedConstraint(newConstraint);
-    setShowASTPanel(!!ast);
-  };
-
-  /**
-   * 验证约束并显示 AST
-   */
-  const validateConstraintWithAST = (constraint: Constraint) => {
-    try {
-      // 尝试从约束表达式生成 AST（简化版本）
-      // 实际项目中应该使用完整的 DSL 解析器
-      if (constraint.expression.includes('<=') && constraint.expression.includes('SUM')) {
-        const ast = createCapacityConstraint('order', 'quantity', 'line', 'capacity');
-        setGeneratedAST(ast);
-        setSolverMapping(generateSolverMapping(ast, 'linear'));
-        setShowASTPanel(true);
+      if (displayEntities.length === 0) {
+        const centerEntity = allEntities.find(e => e.id === focusedNodeId);
+        if (centerEntity) displayEntities = [centerEntity];
       }
-    } catch (e) {
-      console.warn('Failed to generate AST:', e);
+    } else if (selectedDomain) {
+      // 显示选中域的所有实体
+      const domainEntityIds = new Set(allEntities.filter(e => e.domain === selectedDomain).map(e => e.id));
+      displayEntities = allEntities.filter(e => domainEntityIds.has(e.id));
+      displayLinks = allLinks.filter(l => domainEntityIds.has(l.source) && domainEntityIds.has(l.target));
     }
 
-    validateConstraints();
-  };
+    const flowNodes: Node[] = displayEntities.map((entity, idx) => ({
+      id: entity.id,
+      type: 'ontologyNode',
+      position: { x: 100 + (idx % 5) * 220, y: 100 + Math.floor(idx / 5) * 160 },
+      data: entity,
+      style: focusMode && entity.id === focusedNodeId ? { boxShadow: '0 0 0 3px #3b82f6', zIndex: 100 } : {}
+    }));
 
-  const validateConstraints = () => {
-    const results: ValidationResult[] = [];
+    const flowEdges: Edge[] = displayLinks.map((link) => ({
+      id: link.id,
+      source: link.source,
+      target: link.target,
+      label: link.relation,
+      type: 'smoothstep',
+      markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: '#64748b' },
+      style: { stroke: '#64748b', strokeWidth: 1.5 },
+      labelStyle: { fill: '#94a3b8', fontSize: 10, fontWeight: 500 },
+      labelBgStyle: { fill: '#1e293b', stroke: '#475569', strokeWidth: 1 },
+      labelBgPadding: [4, 8],
+    }));
 
-    // 语法检查
-    constraints.forEach(cons => {
-      if (!cons.expression || cons.expression.trim() === '') {
-        results.push({
-          type: 'syntax',
-          severity: 'error',
-          message: `约束 "${cons.name}" 表达式为空`,
-          constraintId: cons.id,
-        });
-      }
-    });
+    setNodes(flowNodes);
+    setEdges(flowEdges);
+  }, [allEntities, allLinks, selectedDomain, focusMode, focusedNodeId, getRelatedNodes, setNodes, setEdges]);
 
-    // 冲突检测
-    const hardConstraints = constraints.filter(c => c.type === 'hard' && c.status === 'active');
-    if (hardConstraints.length >= 2) {
-      results.push({
-        type: 'conflict',
-        severity: 'warning',
-        message: `检测到 ${hardConstraints.length} 个硬约束，可能存在冲突风险`,
-      });
+  // 聚焦时适应视图
+  useEffect(() => {
+    if ((focusMode && focusedNodeId) || selectedDomain) {
+      setTimeout(() => {
+        reactFlowInstance?.fitView({ padding: 0.15, includeHiddenNodes: false });
+      }, 150);
     }
+  }, [focusMode, focusedNodeId, selectedDomain, reactFlowInstance]);
 
-    if (results.length === 0) {
-      results.push({
-        type: 'logic',
-        severity: 'info',
-        message: '所有约束校验通过',
-      });
+  // 处理节点选择
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+    setSelectedNodeId(node.id);
+    setSelectedEntity(node.data as OntologyEntity);
+    setFocusedNodeId(node.id);
+    setFocusMode(true);
+  }, []);
+
+  // 处理边选择
+  const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
+    const link = allLinks.find(l => l.id === edge.id);
+    if (link) {
+      // 可以在这里显示边的详情
     }
+  }, [allLinks]);
 
-    setValidationResults(results);
-    setShowValidationPanel(true);
+  // 切换节点展开
+  const toggleNode = (nodeId: string) => {
+    const newExpanded = new Set(expandedNodes);
+    if (newExpanded.has(nodeId)) newExpanded.delete(nodeId);
+    else newExpanded.add(nodeId);
+    setExpandedNodes(newExpanded);
   };
 
-  const runSimulation = () => {
-    setIsSimulating(true);
-    setTimeout(() => {
-      setIsSimulating(false);
-      setShowValidationPanel(true);
-    }, 1500);
-  };
-
-  const getConstraintIcon = (type: ConstraintType) => {
-    switch (type) {
-      case 'hard': return Shield;
-      case 'soft': return AlertTriangle;
-      case 'objective': return Target;
-    }
-  };
-
-  const getConstraintColor = (type: ConstraintType) => {
-    switch (type) {
-      case 'hard': return '#ef4444';
-      case 'soft': return '#f59e0b';
-      case 'objective': return '#10b981';
-    }
-  };
-
-  const renderDomain = (domain: OntologyDomain, level: number = 0): React.ReactNode => {
-    const isExpanded = expandedNodes.has(domain.id);
-    const hasChildren = domain.children && domain.children.length > 0;
-    const isSelected = selectedDomainPath === domain.path;
-
-    return (
-      <div key={domain.id} style={{ marginLeft: level * 12 }}>
+  // 渲染导航树
+  const renderNavTree = () => {
+    return domains.map((domain) => (
+      <div key={domain.id} className="domain-group">
         <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '4px 8px',
-            cursor: 'pointer',
-            fontSize: 12,
-            backgroundColor: isSelected ? 'var(--accent-light)' : 'transparent',
-            borderLeft: isSelected ? '3px solid #106BA3' : '3px solid transparent',
-          }}
+          className={`domain-header ${selectedDomain === domain.name.toLowerCase() ? 'active' : ''}`}
           onClick={() => {
-            toggleExpand(domain.id);
-            setSelectedDomainPath(domain.path);
+            toggleNode(domain.id);
+            setSelectedDomain(domain.name.toLowerCase());
+            setFocusMode(false);
+            setFocusedNodeId(null);
           }}
         >
-          {hasChildren ? (
-            isExpanded ? <ChevronDown size={14} style={{ marginRight: 4 }} /> : <ChevronRight size={14} style={{ marginRight: 4 }} />
-          ) : (
-            <span style={{ width: 18 }} />
-          )}
-          <span style={{ fontWeight: hasChildren ? 600 : 400, flex: 1 }}>{domain.displayName}</span>
-          <StatusDot status={domain.status} />
+          {expandedNodes.has(domain.id) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          <span className="domain-name">{domain.displayName}</span>
+          <span className="entity-count">{domain.entities.length}</span>
         </div>
-
-        {isExpanded && (
-          <>
+        {expandedNodes.has(domain.id) && (
+          <div className="entity-list">
             {domain.entities.map((entity) => (
               <div
                 key={entity.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '4px 8px 4px 32px',
-                  cursor: 'pointer',
-                  fontSize: 12,
-                  backgroundColor: selectedNodeId === entity.id ? 'var(--accent-light)' : 'transparent',
-                }}
-                onClick={() => {
+                className={`entity-item ${selectedNodeId === entity.id ? 'selected' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
                   setSelectedNodeId(entity.id);
                   setSelectedEntity(entity);
+                  setFocusedNodeId(entity.id);
+                  setFocusMode(true);
                 }}
               >
-                <span style={{ width: 18 }} />
-                {entity.icon === 'battery' && <Battery size={12} style={{ marginRight: 6 }} />}
-                {entity.icon === 'layers' && <Layers size={12} style={{ marginRight: 6 }} />}
-                {entity.icon === 'box' && <Box size={12} style={{ marginRight: 6 }} />}
-                {entity.icon === 'truck' && <Truck size={12} style={{ marginRight: 6 }} />}
-                <span style={{ flex: 1, color: 'var(--text-secondary)' }}>{entity.displayName}</span>
-                <StatusDot status={entity.status} />
+                <StatusIndicator status={entity.status} />
+                <span className="entity-name">{entity.displayName}</span>
               </div>
             ))}
-            {domain.children?.map((child) => renderDomain(child, level + 1))}
-          </>
+          </div>
         )}
       </div>
-    );
+    ));
   };
 
-  // 获取当前选中的domain名称
-  const selectedDomain = findDomainByPath(selectedDomainPath);
+  // 获取当前选中实体的上下游关系
+  const getEntityRelations = useCallback(() => {
+    if (!selectedEntity) return { upstream: [], downstream: [] };
+    const upstream = allLinks.filter(l => l.target === selectedEntity.id);
+    const downstream = allLinks.filter(l => l.source === selectedEntity.id);
+    return { upstream, downstream };
+  }, [selectedEntity, allLinks]);
+
+  const { upstream, downstream } = getEntityRelations();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--palantir-bg-page)' }}>
-      {/* Header */}
-      <header style={{
-        height: 48,
-        background: '#FFFFFF',
-        borderBottom: '1px solid var(--palantir-border)',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 16px',
-        justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Button minimal icon={<ChevronLeft size={18} />} onClick={() => onNavigate('settings')} />
-          <div style={{
-            width: 28,
-            height: 28,
-            background: 'linear-gradient(135deg, #106BA3, #0A4A73)',
-            borderRadius: 4,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <GitBranch size={16} color="white" />
+    <div className="ontology-studio-palantir" style={{ display: 'flex', flexDirection: 'row', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      {/* 左侧面板 */}
+      <div className="left-panel-palantir" style={{ width: '200px', minWidth: '200px', maxWidth: '200px', flexShrink: 0 }}>
+        <div className="panel-header-palantir">
+          <div className="header-title">
+            <Database size={16} />
+            <span>本体导航</span>
+            <span className="entity-total">({allEntities.length}实体)</span>
           </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>本体配置器</div>
-            <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>锂电行业本体管理系统 v2.1.0</div>
+          <div className="header-actions">
+            <button className="icon-btn" title="搜索"><Search size={14} /></button>
+            <button className="icon-btn" title="展开全部" onClick={() => setExpandedNodes(new Set(domains.map(d => d.id)))}>
+              <Maximize2 size={14} />
+            </button>
+            <button className="icon-btn" title="收起全部" onClick={() => setExpandedNodes(new Set())}>
+              <Minimize2 size={14} />
+            </button>
           </div>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Button minimal icon={<Activity size={16} />} text="验证" onClick={validateConstraints} />
-          <Button minimal icon={<Play size={16} />} text="模拟推演" onClick={runSimulation} loading={isSimulating} />
-          <Divider />
-          <Button intent="primary" icon={<Save size={14} />} text="保存更改" />
+        <div className="panel-search">
+          <Search size={14} className="search-icon" />
+          <input type="text" placeholder="搜索本体..." className="search-input" />
         </div>
-      </header>
+        <div className="nav-tree-palantir">
+          {renderNavTree()}
+        </div>
+      </div>
 
-      {/* Main Content */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Left: Resource Navigator */}
-        <div style={{
-          width: 280,
-          background: '#FFFFFF',
-          borderRight: '1px solid var(--palantir-border)',
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
-          <div style={{ padding: 12, borderBottom: '1px solid var(--palantir-border)' }}>
-            <InputGroup
-              leftIcon={<Search size={14} />}
-              placeholder="搜索实体或属性..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              fill
-             
-            />
+      {/* 中间图谱区域 */}
+      <div className="center-panel-palantir" style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+        <div className="graph-toolbar-palantir">
+          <div className="toolbar-left">
+            {focusMode && (
+              <button
+                className="toolbar-btn primary"
+                onClick={() => {
+                  setFocusMode(false);
+                  setFocusedNodeId(null);
+                  setSelectedNodeId(null);
+                  setSelectedEntity(null);
+                }}
+              >
+                <X size={14} />
+                退出聚焦
+              </button>
+            )}
+            {selectedDomain && !focusMode && (
+              <button
+                className="toolbar-btn primary"
+                onClick={() => setSelectedDomain(null)}
+              >
+                <X size={14} />
+                显示全部
+              </button>
+            )}
           </div>
-
-          <div style={{ flex: 1, overflow: 'auto', padding: '8px 0' }}>
-            {domains.map((domain) => renderDomain(domain))}
+          <div className="toolbar-center">
+            <span className="view-title">
+              {focusMode && selectedEntity ? `聚焦: ${selectedEntity.displayName}` :
+               selectedDomain ? `${domains.find(d => d.name.toLowerCase() === selectedDomain)?.displayName}` :
+               '全部本体图谱'}
+            </span>
           </div>
-
-          <div style={{ padding: 12, borderTop: '1px solid var(--palantir-border)' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 8 }}>
-              当前选中: {selectedDomain?.displayName || '未选择'}
-            </div>
-            <Button
-              fill
-             
-              icon={<Plus size={14} />}
-              text="添加实体"
-              onClick={() => setShowAddEntityDialog(true)}
-            />
+          <div className="toolbar-right">
+            <button className="toolbar-btn" title="筛选"><Filter size={14} /></button>
+            <button className="toolbar-btn" title="保存布局"><Save size={14} /></button>
+            <button className="toolbar-btn" title="运行验证"><Play size={14} /></button>
           </div>
         </div>
-
-        {/* Center: Graph Canvas */}
-        <div style={{
-          flex: 1,
-          position: 'relative',
-          minWidth: 0, // 防止flex item溢出
-        }}>
+        <div className="graph-container-palantir">
           <ReactFlow
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
             onNodeClick={onNodeClick}
             onEdgeClick={onEdgeClick}
+            onInit={setReactFlowInstance}
             nodeTypes={nodeTypes}
             fitView
-            fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}
-            snapToGrid
-            snapGrid={[15, 15]}
-            style={{ width: '100%', height: '100%' }}
+            attributionPosition="bottom-left"
           >
-            <Background color="#E1E8ED" gap={20} size={1} />
-            <Controls />
+            <Background color="#475569" gap={20} size={1} />
+            <Controls className="react-flow-controls" />
             <MiniMap
-              nodeStrokeColor="#106BA3"
-              nodeColor="#F5F8FA"
-              maskColor="rgba(245, 248, 250, 0.9)"
+              className="react-flow-minimap"
+              nodeColor={(node) => {
+                const entity = node.data as OntologyEntity;
+                const colors: Record<string, string> = {
+                  'org': '#3b82f6', 'cap': '#10b981', 'prod': '#f59e0b',
+                  'supply': '#8b5cf6', 'mfg': '#ec4899', 'quality': '#ef4444',
+                  'sales': '#06b6d4', 'project': '#84cc16', 'cost': '#f97316'
+                };
+                return colors[entity?.domain] || '#64748b';
+              }}
+              maskColor="rgba(30, 41, 59, 0.8)"
             />
           </ReactFlow>
-
-          {/* Canvas Overlay Info */}
-          <div style={{
-            position: 'absolute',
-            bottom: 16,
-            left: 16,
-            background: 'rgba(255, 255, 255, 0.95)',
-            padding: '8px 12px',
-            borderRadius: 2,
-            border: '1px solid var(--palantir-border)',
-            fontSize: 11,
-            color: 'var(--text-secondary)',
-          }}>
-            节点: {nodes.length} | 关系: {edges.length} | 选中: {selectedNodeId || '无'}
-          </div>
         </div>
+      </div>
 
-        {/* Right: Inspector Panel - Overlay Style */}
-        <div style={{
-          position: 'absolute',
-          right: 0,
-          top: 0,
-          bottom: 0,
-          width: 350,
-          background: '#FFFFFF',
-          borderLeft: '1px solid var(--palantir-border)',
-          boxShadow: '-4px 0 16px rgba(0, 0, 0, 0.08)',
-          display: 'flex',
-          flexDirection: 'column',
-          zIndex: 10,
-          transform: selectedEntity || selectedEdgeId ? 'translateX(0)' : 'translateX(100%)',
-          transition: 'transform 0.3s ease',
-        }}>
-          {selectedEdgeId ? (
-            <EdgeInspector
-              edgeId={selectedEdgeId}
-              links={links}
-              setLinks={setLinks}
-              domains={domains}
-              onClose={() => setSelectedEdgeId(null)}
-            />
-          ) : selectedEntity ? (
-            <>
-              <div style={{
-                padding: '12px 16px',
-                borderBottom: '1px solid var(--palantir-border)',
-                background: '#F8F9FA',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-              }}>
-                <div>
-                  <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 4 }}>
-                    {selectedEntity.type === 'Object_Type' ? '对象类型' :
-                     selectedEntity.type === 'Relation_Type' ? '关系类型' : '属性类型'}
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>
-                    {selectedEntity.type === 'Object_Type' && `${selectedEntity.displayName}`}
-                    {selectedEntity.type === 'Relation_Type' && `${selectedEntity.displayName}`}
-                    {selectedEntity.type === 'Attribute_Type' && `${selectedEntity.displayName}`}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-                    ID: {selectedEntity.id}
-                  </div>
-                </div>
+      {/* 右侧面板 - 浮动抽屉式 */}
+      <div className="right-panel-palantir" style={{
+        position: 'fixed',
+        right: 0,
+        top: 0,
+        bottom: 0,
+        width: '450px',
+        minWidth: '450px',
+        maxWidth: '450px',
+        zIndex: 100,
+        boxShadow: '-4px 0 20px rgba(0,0,0,0.5)',
+        background: '#1e293b',
+        borderLeft: '1px solid #334155',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        {selectedEntity ? (
+          <>
+            <div className="panel-header-palantir">
+              <div className="header-title">
+                {selectedEntity.icon === 'battery' && <Battery size={16} />}
+                {selectedEntity.icon === 'factory' && <Factory size={16} />}
+                {selectedEntity.icon === 'cpu' && <Cpu size={16} />}
+                {selectedEntity.icon === 'shield' && <Shield size={16} />}
+                {selectedEntity.icon === 'truck' && <Truck size={16} />}
+                {selectedEntity.icon === 'box' && <Box size={16} />}
+                <span>{selectedEntity.displayName}</span>
+              </div>
+              <div className="header-actions">
+                <button className="icon-btn" onClick={() => {
+                  setSelectedEntity(null);
+                  setSelectedNodeId(null);
+                  setFocusMode(false);
+                }}><X size={14} /></button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', width: '100%', height: '40px', background: '#0f172a', borderBottom: '1px solid #334155', overflow: 'hidden' }}>
+              {['general', 'relations', 'constraints'].map((tab) => (
                 <button
-                  onClick={() => setSelectedEntity(null)}
+                  key={tab}
+                  onClick={() => setActiveTab(tab as any)}
                   style={{
-                    background: 'transparent',
+                    flex: '1 1 33.33%',
+                    width: '33.33%',
+                    height: '40px',
+                    lineHeight: '40px',
+                    fontSize: '13px',
+                    padding: '0 8px',
+                    margin: 0,
+                    background: activeTab === tab ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
                     border: 'none',
+                    borderBottom: activeTab === tab ? '2px solid #3b82f6' : '2px solid transparent',
+                    color: activeTab === tab ? '#e2e8f0' : '#94a3b8',
                     cursor: 'pointer',
-                    padding: '4px',
-                    color: 'var(--text-tertiary)',
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'clip',
+                    boxSizing: 'border-box',
                   }}
                 >
-                  <X size={18} />
+                  {tab === 'general' && '基础'}
+                  {tab === 'relations' && '关系'}
+                  {tab === 'constraints' && '约束'}
                 </button>
-              </div>
+              ))}
+            </div>
 
-              <Tabs
-                selectedTabId={activeTab}
-                onChange={(id) => setActiveTab(id as any)}
-                className="flex flex-col flex-1"
-              >
-                <Tab id="general" title="通用" panel={
-                  <div style={{ padding: 16 }}>
-                    <FormGroup label="显示名称" labelFor="displayName">
-                      <InputGroup
-                        id="displayName"
-                        defaultValue={selectedEntity.displayName}
-                        fill
-                      />
-                    </FormGroup>
-
-                    <FormGroup label="实体类型">
-                      <HTMLSelect
-                        fill
-                        value={selectedEntity.type}
-                        onChange={(e) => {
-                          const newType = e.target.value as EntityType;
-                          updateEntity(selectedEntity.id, { type: newType });
-                        }}
-                      >
-                        {ENTITY_TYPE_OPTIONS.map(group => (
-                          <optgroup key={group.category} label={group.category}>
-                            {group.options.map(opt => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </HTMLSelect>
-                      <div style={{ marginTop: 4, fontSize: 10, color: 'var(--text-tertiary)' }}>
-                        {ENTITY_TYPE_OPTIONS.flatMap(g => g.options).find(o => o.value === selectedEntity.type)?.desc}
-                      </div>
-                    </FormGroup>
-
-                    <FormGroup label="状态">
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <Tag
-                          intent={selectedEntity.status === 'verified' ? 'success' : 'none'}
-                          minimal={selectedEntity.status !== 'verified'}
-                        >
-                          已验证
-                        </Tag>
-                        <Tag
-                          intent={selectedEntity.status === 'draft' ? 'warning' : 'none'}
-                          minimal={selectedEntity.status !== 'draft'}
-                        >
-                          草稿
-                        </Tag>
-                        <Tag
-                          intent={selectedEntity.status === 'conflict' ? 'danger' : 'none'}
-                          minimal={selectedEntity.status !== 'conflict'}
-                        >
-                          冲突
-                        </Tag>
-                      </div>
-                    </FormGroup>
-
-                    <Divider />
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
-                        属性 ({selectedEntity.properties.length})
-                      </span>
-                      <Button small minimal icon={<Plus size={14} />} />
+            <div className="panel-content-palantir">
+              {activeTab === 'general' && (
+                <div className="entity-details">
+                  {/* 全局操作按钮 */}
+                  <div className="detail-section">
+                    <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>本体操作</span>
                     </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="toolbar-btn primary" onClick={() => setShowAddNodeDialog(true)} style={{ flex: 1 }}>
+                        <Plus size={12} />
+                        添加新节点
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '8px' }}>
+                      从节点类型库创建新本体实体
+                    </div>
+                  </div>
 
-                    {selectedEntity.properties.map((prop, idx) => (
-                      <Card key={idx} style={{ padding: 10, marginBottom: 8 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <span style={{ fontSize: 11, fontWeight: 500 }}>{prop.key}</span>
-                          <Tag minimal className="bp5-small">
-                            {ATTRIBUTE_TYPE_OPTIONS.flatMap(g => g.options).find(o => o.value === prop.type)?.label || prop.type}
-                          </Tag>
-                        </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                          {prop.value !== undefined ? prop.value : '—'} {prop.unit}
-                        </div>
-                      </Card>
+                  <div className="detail-section">
+                    <div className="section-title">基础属性</div>
+                    <div className="detail-row"><span className="detail-label">ID</span><span className="detail-value">{selectedEntity.id}</span></div>
+                    <div className="detail-row"><span className="detail-label">所属域</span><span className="detail-value">{selectedEntity.domainName}</span></div>
+                    <div className="detail-row"><span className="detail-label">命名空间</span><span className="detail-value">{selectedEntity.namespace}</span></div>
+                    <div className="detail-row"><span className="detail-label">版本</span><span className="detail-value">{selectedEntity.version}</span></div>
+                    <div className="detail-row"><span className="detail-label">状态</span><span className="detail-value"><span className={`status-badge ${selectedEntity.status}`}>{selectedEntity.status}</span></span></div>
+                    <div className="detail-row"><span className="detail-label">创建人</span><span className="detail-value">{selectedEntity.created_by}</span></div>
+                    <div className="detail-row"><span className="detail-label">更新时间</span><span className="detail-value">{selectedEntity.updated_at}</span></div>
+                  </div>
+
+                  <div className="detail-section">
+                    <div className="section-title">业务属性</div>
+                    {selectedEntity.properties.map((prop) => (
+                      <div key={prop.key} className="detail-row">
+                        <span className="detail-label">{prop.key}</span>
+                        <span className="detail-value">{prop.value !== undefined ? String(prop.value) : '—'}{prop.unit && <span className="unit"> {prop.unit}</span>}</span>
+                      </div>
                     ))}
                   </div>
-                } />
 
-                <Tab id="logic" title="逻辑" panel={
-                  <div style={{ padding: 16, height: '100%', overflow: 'auto' }}>
-                    {/* 约束配置区域 */}
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        textTransform: 'uppercase',
-                        color: 'var(--text-secondary)',
-                        marginBottom: 12,
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
+                  {selectedEntity.metadata && Object.keys(selectedEntity.metadata).length > 0 && (
+                    <div className="detail-section">
+                      <div className="section-title">扩展元数据</div>
+                      {Object.entries(selectedEntity.metadata).map(([key, value]) => (
+                        <div key={key} className="detail-row">
+                          <span className="detail-label">{key}</span>
+                          <span className="detail-value">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {selectedEntity.tags && selectedEntity.tags.length > 0 && (
+                    <div className="detail-section">
+                      <div className="section-title">标签</div>
+                      <div className="tag-list">
+                        {selectedEntity.tags.map((tag, idx) => <span key={idx} className="tag">{tag}</span>)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'relations' && (
+                <div className="entity-relations">
+                  {/* 关系操作按钮 */}
+                  <div className="detail-section">
+                    <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>关联关系管理</span>
+                      <button className="toolbar-btn primary" onClick={() => {
+                        setRelationConfig({ ...relationConfig, source: selectedEntity?.id || '' });
+                        setShowAddRelationDialog(true);
                       }}>
-                        <span>约束定义 (DSL)</span>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <Button
-                           
-                            minimal
-                            icon={<Shield size={14} />}
-                            text="校验"
-                            onClick={validateConstraints}
-                          />
-                          <Button
-                           
-                            minimal
-                            icon={<Plus size={14} />}
-                            text="添加约束"
-                            onClick={addConstraint}
-                          />
-                        </div>
-                      </div>
+                        <Plus size={12} />
+                        添加关联
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                      从节点库选择节点建立关联关系
+                    </div>
+                  </div>
 
-                      {/* 当前实体相关的约束列表 */}
-                      <div style={{ marginBottom: 16 }}>
-                        {constraints
-                          .filter(c => c.entityId === selectedEntity.id)
-                          .map(constraint => {
-                            const Icon = getConstraintIcon(constraint.type);
-                            const isSelected = selectedConstraint?.id === constraint.id;
-                            return (
-                              <div
-                                key={constraint.id}
-                                onClick={() => setSelectedConstraint(constraint)}
-                                style={{
-                                  padding: 10,
-                                  marginBottom: 8,
-                                  border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--palantir-border)'}`,
-                                  borderRadius: 2,
-                                  cursor: 'pointer',
-                                  background: isSelected ? 'rgba(16, 107, 163, 0.05)' : '#fff',
-                                }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                  <Icon size={14} color={getConstraintColor(constraint.type)} />
-                                  <span style={{ fontSize: 12, fontWeight: 500, flex: 1 }}>{constraint.name}</span>
-                                  <Tag
-                                    minimal
-                                    intent={constraint.type === 'hard' ? 'danger' : constraint.type === 'soft' ? 'warning' : 'success'}
-                                    style={{ fontSize: 10 }}
-                                  >
-                                    {constraint.type === 'hard' ? '硬' : constraint.type === 'soft' ? '软' : '目标'}
-                                  </Tag>
-                                  <Button
-                                   
-                                    minimal
-                                    icon={<Trash2 size={12} />}
-                                    onClick={(e) => { e.stopPropagation(); deleteConstraint(constraint.id); }}
-                                  />
-                                </div>
-                                <div style={{
-                                  fontSize: 11,
-                                  color: 'var(--text-secondary)',
-                                  fontFamily: 'monospace',
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis'
-                                }}>
-                                  {constraint.expression || '(无表达式)'}
-                                </div>
-                              </div>
-                            );
-                          })}
+                  {/* 关系类型图例 */}
+                  <div className="detail-section">
+                    <div className="section-title">关系类型图例</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                      <span style={{ padding: '2px 8px', background: '#3b82f6', color: '#fff', fontSize: '11px', borderRadius: '4px' }}>结构</span>
+                      <span style={{ padding: '2px 8px', background: '#10b981', color: '#fff', fontSize: '11px', borderRadius: '4px' }}>流程</span>
+                      <span style={{ padding: '2px 8px', background: '#f59e0b', color: '#fff', fontSize: '11px', borderRadius: '4px' }}>控制</span>
+                      <span style={{ padding: '2px 8px', background: '#8b5cf6', color: '#fff', fontSize: '11px', borderRadius: '4px' }}>时间</span>
+                      <span style={{ padding: '2px 8px', background: '#ef4444', color: '#fff', fontSize: '11px', borderRadius: '4px' }}>因果</span>
+                      <span style={{ padding: '2px 8px', background: '#64748b', color: '#fff', fontSize: '11px', borderRadius: '4px' }}>引用</span>
+                    </div>
+                  </div>
 
-                        {constraints.filter(c => c.entityId === selectedEntity.id).length === 0 && (
-                          <div style={{
-                            padding: 20,
-                            textAlign: 'center',
-                            color: 'var(--text-tertiary)',
-                            fontSize: 12,
-                            border: '1px dashed var(--palantir-border)',
-                            borderRadius: 2
-                          }}>
-                            暂无约束，点击上方"添加约束"按钮创建
-                          </div>
-                        )}
-                      </div>
-
-                      {/* 约束编辑器 */}
-                      {selectedConstraint && selectedConstraint.entityId === selectedEntity.id && (
-                        <Card style={{ marginBottom: 16, background: '#F8F9FA' }}>
-                          <div style={{ marginBottom: 12 }}>
-                            <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8 }}>约束名称</div>
-                            <InputGroup
-                             
-                              value={selectedConstraint.name}
-                              onChange={(e) => updateConstraint(selectedConstraint.id, { name: e.target.value })}
-                              fill
-                            />
-                          </div>
-
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                            <div>
-                              <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8 }}>类型</div>
-                              <HTMLSelect
-                                value={selectedConstraint.type}
-                                onChange={(e) => updateConstraint(selectedConstraint.id, { type: e.target.value as ConstraintType })}
-                                fill
-                                className="bp5-small"
-                              >
-                                <option value="hard">硬约束</option>
-                                <option value="soft">软约束</option>
-                                <option value="objective">优化目标</option>
-                              </HTMLSelect>
-                            </div>
-                            <div>
-                              <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8 }}>分组</div>
-                              <InputGroup
-                               
-                                value={selectedConstraint.group}
-                                onChange={(e) => updateConstraint(selectedConstraint.id, { group: e.target.value })}
-                                fill
-                              />
-                            </div>
-                          </div>
-
-                          <div style={{ marginBottom: 12 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                              <span style={{ fontSize: 11, fontWeight: 600 }}>DSL 表达式</span>
-                              <Button
-                               
-                                minimal
-                                active={dslMode}
-                                onClick={() => setDslMode(!dslMode)}
-                              >
-                                {dslMode ? '专家模式' : '低代码'}
-                              </Button>
-                            </div>
-
-                            {dslMode ? (
-                              <textarea
-                                value={selectedConstraint.expression}
-                                onChange={(e) => updateConstraint(selectedConstraint.id, { expression: e.target.value })}
-                                style={{
-                                  width: '100%',
-                                  minHeight: 80,
-                                  padding: 8,
-                                  border: '1px solid var(--palantir-border-dark)',
-                                  borderRadius: 2,
-                                  fontFamily: 'monospace',
-                                  fontSize: 12,
-                                  resize: 'vertical',
-                                }}
-                                placeholder="例如: SUM(order.quantity) <= line.capacity"
-                              />
-                            ) : (
-                              <div style={{
-                                padding: 12,
-                                background: '#fff',
-                                border: '1px solid var(--palantir-border)',
-                                borderRadius: 2,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: 8
-                              }}>
-                                <HTMLSelect
-                                 
-                                  onChange={(e) => {
-                                    if (e.target.value) {
-                                      updateConstraint(selectedConstraint.id, {
-                                        expression: selectedConstraint.expression + e.target.value
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <option value="">选择函数...</option>
-                                  <option value="SUM(">SUM(</option>
-                                  <option value="MAX(">MAX(</option>
-                                  <option value="MIN(">MIN(</option>
-                                  <option value="AVG(">AVG(</option>
-                                  <option value="COUNT(">COUNT(</option>
-                                  <option value="NO_OVERLAP(">NO_OVERLAP(</option>
-                                </HTMLSelect>
-
-                                <HTMLSelect
-                                 
-                                  onChange={(e) => {
-                                    if (e.target.value) {
-                                      updateConstraint(selectedConstraint.id, {
-                                        expression: selectedConstraint.expression + e.target.value
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <option value="">选择属性...</option>
-                                  {selectedEntity.properties.map(prop => (
-                                    <option key={prop.key} value={prop.key}>{prop.key}</option>
-                                  ))}
-                                </HTMLSelect>
-
-                                <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                                  {['<=', '>=', '==', '!=', '<', '>'].map(op => (
-                                    <Button
-                                      key={op}
-                                     
-                                      minimal
-                                      onClick={() => updateConstraint(selectedConstraint.id, {
-                                        expression: selectedConstraint.expression + ' ' + op + ' '
-                                      })}
-                                    >
-                                      {op}
-                                    </Button>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            <div style={{
-                              marginTop: 8,
-                              padding: 8,
-                              background: '#fff',
-                              borderRadius: 2,
-                              fontSize: 11,
-                              fontFamily: 'monospace',
-                              color: 'var(--text-secondary)'
-                            }}>
-                              当前: {selectedConstraint.expression || '(空)'}
-                            </div>
-                          </div>
-                        </Card>
-                      )}
-
-                      {/* 约束模板 */}
-                      <div style={{ marginBottom: 16 }}>
-                        <div style={{
-                          fontSize: 11,
-                          fontWeight: 600,
-                          textTransform: 'uppercase',
-                          color: 'var(--text-secondary)',
-                          marginBottom: 8
+                  <div className="detail-section">
+                    <div className="section-title">上游关系 (输入) · {upstream.length}</div>
+                    {upstream.length > 0 ? upstream.map(link => {
+                      const sourceEntity = allEntities.find(e => e.id === link.source);
+                      const typeColors: Record<string, string> = {
+                        structural: '#3b82f6', flow: '#10b981', control: '#f59e0b',
+                        temporal: '#8b5cf6', causal: '#ef4444', reference: '#64748b'
+                      };
+                      const typeNames: Record<string, string> = {
+                        structural: '结构', flow: '流程', control: '控制',
+                        temporal: '时间', causal: '因果', reference: '引用'
+                      };
+                      return (
+                        <div key={link.id} className="relation-row" style={{
+                          display: 'flex', alignItems: 'center', padding: '10px', background: '#0f172a',
+                          borderRadius: '6px', marginBottom: '6px', borderLeft: `3px solid ${typeColors[link.relationType]}`,
+                          maxWidth: '100%', boxSizing: 'border-box'
                         }}>
-                          约束模板库
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                              <Link2 size={12} color={typeColors[link.relationType]} />
+                              <span style={{ fontSize: '12px', color: '#e2e8f0', fontWeight: 500 }}>
+                                {sourceEntity?.displayName || link.source}
+                              </span>
+                              <span style={{ fontSize: '11px', color: '#94a3b8' }}>→</span>
+                              <span style={{ fontSize: '12px', color: '#3b82f6' }}>{link.relation}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span style={{
+                                padding: '1px 6px', background: typeColors[link.relationType] + '20',
+                                color: typeColors[link.relationType], fontSize: '10px', borderRadius: '3px'
+                              }}>{typeNames[link.relationType]}</span>
+                              <span style={{ fontSize: '10px', color: '#64748b' }}>{link.cardinality}</span>
+                              {link.properties?.strength === 'weak' && <span style={{ fontSize: '10px', color: '#f59e0b' }}>弱关联</span>}
+                              {link.properties?.temporality === 'transient' && <span style={{ fontSize: '10px', color: '#8b5cf6' }}>临时</span>}
+                              {link.semantics?.map((s, i) => (
+                                <span key={i} style={{ fontSize: '10px', color: '#64748b', background: '#1e293b', padding: '1px 4px', borderRadius: '2px' }}>{s}</span>
+                              ))}
+                            </div>
+                          </div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                          {constraintTemplates.map(template => (
-                            <Button
-                              key={template.id}
-                             
-                              minimal
-                              onClick={() => applyTemplate(template)}
+                      );
+                    }) : <div className="empty-text">无上游关系</div>}
+                  </div>
+
+                  <div className="detail-section">
+                    <div className="section-title">下游关系 (输出) · {downstream.length}</div>
+                    {downstream.length > 0 ? downstream.map(link => {
+                      const targetEntity = allEntities.find(e => e.id === link.target);
+                      const typeColors: Record<string, string> = {
+                        structural: '#3b82f6', flow: '#10b981', control: '#f59e0b',
+                        temporal: '#8b5cf6', causal: '#ef4444', reference: '#64748b'
+                      };
+                      const typeNames: Record<string, string> = {
+                        structural: '结构', flow: '流程', control: '控制',
+                        temporal: '时间', causal: '因果', reference: '引用'
+                      };
+                      return (
+                        <div key={link.id} className="relation-row" style={{
+                          display: 'flex', alignItems: 'center', padding: '10px', background: '#0f172a',
+                          borderRadius: '6px', marginBottom: '6px', borderLeft: `3px solid ${typeColors[link.relationType]}`,
+                          maxWidth: '100%', boxSizing: 'border-box'
+                        }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                              <span style={{ fontSize: '12px', color: '#3b82f6' }}>{link.relation}</span>
+                              <span style={{ fontSize: '11px', color: '#94a3b8' }}>→</span>
+                              <Link2 size={12} color={typeColors[link.relationType]} />
+                              <span style={{ fontSize: '12px', color: '#e2e8f0', fontWeight: 500 }}>
+                                {targetEntity?.displayName || link.target}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span style={{
+                                padding: '1px 6px', background: typeColors[link.relationType] + '20',
+                                color: typeColors[link.relationType], fontSize: '10px', borderRadius: '3px'
+                              }}>{typeNames[link.relationType]}</span>
+                              <span style={{ fontSize: '10px', color: '#64748b' }}>{link.cardinality}</span>
+                              {link.properties?.strength === 'weak' && <span style={{ fontSize: '10px', color: '#f59e0b' }}>弱关联</span>}
+                              {link.properties?.temporality === 'transient' && <span style={{ fontSize: '10px', color: '#8b5cf6' }}>临时</span>}
+                              {link.semantics?.map((s, i) => (
+                                <span key={i} style={{ fontSize: '10px', color: '#64748b', background: '#1e293b', padding: '1px 4px', borderRadius: '2px' }}>{s}</span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }) : <div className="empty-text">无下游关系</div>}
+                  </div>
+
+                </div>
+              )}
+
+              {activeTab === 'constraints' && (
+                <div className="entity-constraints">
+                  <div className="detail-section">
+                    <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>已应用约束</span>
+                      <button className="toolbar-btn primary" onClick={() => setShowAddConstraintDialog(true)}>
+                        <Plus size={12} />
+                        从库添加
+                      </button>
+                    </div>
+
+                    {/* 实体相关约束列表 */}
+                    {constraints.filter(c => c.entityId === selectedEntity.id).length === 0 ? (
+                      <div className="empty-text">暂无约束规则，请从约束库添加</div>
+                    ) : (
+                      constraints.filter(c => c.entityId === selectedEntity.id).map(c => {
+                        const libraryItem = constraintLibrary.find(lib => lib.id === c.libraryItemId);
+                        return (
+                          <div key={c.id} className="constraint-item" style={{
+                            padding: '12px',
+                            background: '#0f172a',
+                            borderRadius: '6px',
+                            marginBottom: '8px',
+                            border: selectedConstraint?.id === c.id ? '1px solid #3b82f6' : '1px solid transparent'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span className={`constraint-badge ${c.category}`}>{c.category}</span>
+                                <span style={{ fontSize: '12px', color: '#e2e8f0', fontWeight: 500 }}>{libraryItem?.name || c.type}</span>
+                              </div>
+                              <button className="icon-btn" onClick={() => deleteConstraint(c.id)}>
+                                <X size={12} />
+                              </button>
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>{c.description}</div>
+                            <code style={{ fontSize: '11px', color: '#60a5fa', background: '#1e293b', padding: '4px 8px', borderRadius: '4px', display: 'block' }}>
+                              {c.expression}
+                            </code>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 从约束库选择对话框 */}
+              {showAddConstraintDialog && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000
+                }}>
+                  <div style={{
+                    background: '#1e293b',
+                    borderRadius: '12px',
+                    padding: '24px',
+                    width: '500px',
+                    maxWidth: '90%',
+                    maxHeight: '80vh',
+                    overflow: 'auto',
+                    border: '1px solid #334155'
+                  }}>
+                    <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#f1f5f9' }}>
+                      从约束库添加
+                      <span style={{ fontSize: '12px', color: '#64748b', marginLeft: '8px', fontWeight: 'normal' }}>
+                        适用于当前实体的约束
+                      </span>
+                    </h3>
+
+                    {/* 适用约束列表 */}
+                    <div style={{ marginBottom: '16px' }}>
+                      {getApplicableConstraints().length === 0 ? (
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                          当前领域暂无适用约束，请在约束库中添加
+                        </div>
+                      ) : (
+                        getApplicableConstraints().map(item => {
+                          const isAlreadyAdded = constraints.some(c => c.entityId === selectedEntity?.id && c.libraryItemId === item.id);
+                          return (
+                            <div
+                              key={item.id}
+                              onClick={() => !isAlreadyAdded && setSelectedLibraryItem(item)}
                               style={{
-                                justifyContent: 'flex-start',
-                                textAlign: 'left',
-                                padding: '8px 12px',
-                                height: 'auto'
+                                padding: '12px',
+                                background: isAlreadyAdded ? '#0f172a' : (selectedLibraryItem?.id === item.id ? 'rgba(59, 130, 246, 0.2)' : '#0f172a'),
+                                borderRadius: '8px',
+                                marginBottom: '8px',
+                                border: selectedLibraryItem?.id === item.id ? '1px solid #3b82f6' : '1px solid #334155',
+                                cursor: isAlreadyAdded ? 'not-allowed' : 'pointer',
+                                opacity: isAlreadyAdded ? 0.5 : 1
                               }}
                             >
-                              <div>
-                                <div style={{ fontSize: 12, fontWeight: 500 }}>{template.name}</div>
-                                <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-                                  {template.expression.slice(0, 30)}...
-                                </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 500, color: '#e2e8f0' }}>{item.name}</span>
+                                <span style={{
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '10px',
+                                  background: item.category === 'hard' ? '#ef4444' : item.category === 'soft' ? '#f59e0b' : '#3b82f6',
+                                  color: '#fff'
+                                }}>
+                                  {item.category}
+                                </span>
                               </div>
-                            </Button>
+                              <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>{item.description}</div>
+                              <code style={{ fontSize: '10px', color: '#60a5fa', background: '#1e293b', padding: '2px 6px', borderRadius: '3px' }}>
+                                {item.expression}
+                              </code>
+                              {isAlreadyAdded && (
+                                <div style={{ fontSize: '10px', color: '#10b981', marginTop: '4px' }}>✓ 已添加</div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                      <button
+                        className="toolbar-btn"
+                        onClick={() => {
+                          setShowAddConstraintDialog(false);
+                          setSelectedLibraryItem(null);
+                        }}
+                      >
+                        取消
+                      </button>
+                      <button
+                        className="toolbar-btn primary"
+                        onClick={() => selectedLibraryItem && addConstraintFromLibrary(selectedLibraryItem)}
+                        disabled={!selectedLibraryItem}
+                      >
+                        添加选中约束
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 添加新节点对话框 */}
+              {showAddNodeDialog && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000
+                }}>
+                  <div style={{
+                    background: '#1e293b',
+                    borderRadius: '12px',
+                    padding: '24px',
+                    width: '600px',
+                    maxWidth: '90%',
+                    maxHeight: '90vh',
+                    overflow: 'auto',
+                    border: '1px solid #334155'
+                  }}>
+                    <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#f1f5f9' }}>
+                      添加新节点
+                      <span style={{ fontSize: '12px', color: '#64748b', marginLeft: '8px', fontWeight: 'normal' }}>
+                        从节点类型库选择
+                      </span>
+                    </h3>
+
+                    {!selectedNodeType ? (
+                      /* 第一步：选择节点类型 */
+                      <div style={{ marginBottom: '16px' }}>
+                        <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '12px' }}>
+                          请选择要创建的节点类型：
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                          {nodeTypeLibrary.map(item => (
+                            <div
+                              key={item.id}
+                              onClick={() => {
+                                setSelectedNodeType(item);
+                                setNewNodeConfig({
+                                  id: '',
+                                  displayName: '',
+                                  properties: [...item.defaultProperties],
+                                  parentId: '',
+                                  status: 'active',
+                                  tags: []
+                                });
+                              }}
+                              style={{
+                                padding: '12px',
+                                background: '#0f172a',
+                                borderRadius: '8px',
+                                border: '1px solid #334155',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <div style={{ fontSize: '13px', fontWeight: 500, color: '#e2e8f0', marginBottom: '4px' }}>
+                                {item.name}
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>
+                                {item.domainName}
+                              </div>
+                              <div style={{ fontSize: '10px', color: '#94a3b8' }}>
+                                {item.description}
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </div>
-
-                      {/* 智能推荐约束模板 */}
-                      {showRecommendedTemplates && recommendedTemplates.length > 0 && (
-                        <div style={{ marginBottom: 16 }}>
-                          <div style={{
-                            fontSize: 11,
-                            fontWeight: 600,
-                            textTransform: 'uppercase',
-                            color: '#10b981',
-                            marginBottom: 8,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6
-                          }}>
-                            <Zap size={12} />
-                            智能推荐约束
-                            <Tag minimal intent="success" style={{ marginLeft: 4 }}>
-                              {recommendedTemplates.length}
-                            </Tag>
+                    ) : (
+                      /* 第二步：配置节点详情 */
+                      <div style={{ marginBottom: '16px' }}>
+                        <div style={{
+                          padding: '12px',
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          borderRadius: '8px',
+                          marginBottom: '16px',
+                          border: '1px solid rgba(59, 130, 246, 0.3)'
+                        }}>
+                          <div style={{ fontSize: '13px', fontWeight: 500, color: '#e2e8f0' }}>
+                            已选择：{selectedNodeType.name}
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
-                            {recommendedTemplates.slice(0, 3).map(template => (
-                              <Card
-                                key={template.templateId}
-                                interactive
-                                onClick={() => applyRecommendedTemplate(template)}
+                          <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                            {selectedNodeType.domainName} · {selectedNodeType.description}
+                          </div>
+                        </div>
+
+                        <div style={{ marginBottom: '12px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                            节点ID <span style={{ color: '#ef4444' }}>*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={newNodeConfig.id}
+                            onChange={(e) => setNewNodeConfig({ ...newNodeConfig, id: e.target.value })}
+                            placeholder="例如：workshop-new-01"
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              background: '#0f172a',
+                              border: '1px solid #334155',
+                              borderRadius: '6px',
+                              color: '#e2e8f0',
+                              fontSize: '13px'
+                            }}
+                          />
+                        </div>
+
+                        <div style={{ marginBottom: '12px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                            显示名称 <span style={{ color: '#ef4444' }}>*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={newNodeConfig.displayName}
+                            onChange={(e) => setNewNodeConfig({ ...newNodeConfig, displayName: e.target.value })}
+                            placeholder="例如：新车间01"
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              background: '#0f172a',
+                              border: '1px solid #334155',
+                              borderRadius: '6px',
+                              color: '#e2e8f0',
+                              fontSize: '13px'
+                            }}
+                          />
+                        </div>
+
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                            属性值
+                          </label>
+                          {newNodeConfig.properties.map((prop, idx) => (
+                            <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                              <input
+                                type="text"
+                                value={prop.key}
+                                readOnly
                                 style={{
-                                  padding: '10px 12px',
-                                  background: '#f0fdf4',
-                                  border: '1px solid #86efac'
+                                  flex: 1,
+                                  padding: '8px 12px',
+                                  background: '#0f172a',
+                                  border: '1px solid #334155',
+                                  borderRadius: '6px',
+                                  color: '#94a3b8',
+                                  fontSize: '12px'
                                 }}
-                              >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <div>
-                                    <div style={{ fontSize: 12, fontWeight: 600, color: '#166534' }}>
-                                      {template.name}
-                                    </div>
-                                    <div style={{ fontSize: 10, color: '#15803d', marginTop: 2 }}>
-                                      {template.example}
-                                    </div>
-                                  </div>
-                                  <Button
-                                    small
-                                    intent="success"
-                                    icon={<CheckCircle2 size={14} />}
-                                    text="应用"
-                                  />
-                                </div>
-                              </Card>
-                            ))}
+                              />
+                              <input
+                                type="text"
+                                value={prop.value}
+                                onChange={(e) => {
+                                  const newProps = [...newNodeConfig.properties];
+                                  newProps[idx] = { ...prop, value: e.target.value };
+                                  setNewNodeConfig({ ...newNodeConfig, properties: newProps });
+                                }}
+                                placeholder="值"
+                                style={{
+                                  flex: 1,
+                                  padding: '8px 12px',
+                                  background: '#0f172a',
+                                  border: '1px solid #334155',
+                                  borderRadius: '6px',
+                                  color: '#e2e8f0',
+                                  fontSize: '12px'
+                                }}
+                              />
+                              {prop.unit && (
+                                <span style={{ padding: '8px 12px', color: '#64748b', fontSize: '12px' }}>
+                                  {prop.unit}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* 父节点选择 */}
+                        <div style={{ marginBottom: '12px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                            父节点（层级关系）
+                          </label>
+                          <select
+                            value={newNodeConfig.parentId}
+                            onChange={(e) => setNewNodeConfig({ ...newNodeConfig, parentId: e.target.value })}
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              background: '#0f172a',
+                              border: '1px solid #334155',
+                              borderRadius: '6px',
+                              color: '#e2e8f0',
+                              fontSize: '13px'
+                            }}
+                          >
+                            <option value="">无父节点</option>
+                            {allEntities
+                              .filter(e => e.domain === selectedNodeType.domain)
+                              .map(entity => (
+                                <option key={entity.id} value={entity.id}>
+                                  {entity.displayName} ({entity.domainName})
+                                </option>
+                              ))}
+                          </select>
+                          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
+                            选择父节点将自动建立"contains"结构关系
                           </div>
                         </div>
-                      )}
 
-                      <Divider />
+                        {/* 节点状态 */}
+                        <div style={{ marginBottom: '12px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                            节点状态
+                          </label>
+                          <select
+                            value={newNodeConfig.status}
+                            onChange={(e) => setNewNodeConfig({ ...newNodeConfig, status: e.target.value as any })}
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              background: '#0f172a',
+                              border: '1px solid #334155',
+                              borderRadius: '6px',
+                              color: '#e2e8f0',
+                              fontSize: '13px'
+                            }}
+                          >
+                            <option value="active">活跃 (Active)</option>
+                            <option value="draft">草稿 (Draft)</option>
+                            <option value="deprecated">废弃 (Deprecated)</option>
+                          </select>
+                        </div>
 
-                      {/* 计算属性公式 */}
-                      <FormGroup
-                        label="计算属性公式"
-                        labelInfo="(支持 LaTeX)"
-                        style={{ marginTop: 16 }}
-                      >
-                        <textarea
-                          style={{
-                            width: '100%',
-                            minHeight: 80,
-                            padding: 8,
-                            border: '1px solid var(--palantir-border-dark)',
-                            borderRadius: 2,
-                            fontFamily: 'monospace',
-                            fontSize: 12,
-                            resize: 'vertical',
-                          }}
-                          placeholder="例如: sum(components.carbon) * (1 + manufacturing_loss_rate)"
-                          defaultValue={selectedEntity.properties.find(p => p.formula)?.formula || ''}
-                        />
-                      </FormGroup>
+                        {/* 关联关系配置 */}
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                            关联关系配置
+                          </label>
+                          {newNodeRelations.map((rel, idx) => (
+                            <div key={idx} style={{
+                              padding: '10px',
+                              background: '#0f172a',
+                              borderRadius: '6px',
+                              marginBottom: '8px',
+                              border: '1px solid #334155'
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '12px', color: '#e2e8f0' }}>
+                                  → {allEntities.find(e => e.id === rel.targetId)?.displayName || rel.targetId}
+                                </span>
+                                <button
+                                  className="icon-btn"
+                                  onClick={() => setNewNodeRelations(newNodeRelations.filter((_, i) => i !== idx))}
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                              <div style={{ fontSize: '10px', color: '#64748b' }}>
+                                {rel.relation} ({rel.relationType})
+                              </div>
+                            </div>
+                          ))}
+                          <button
+                            className="toolbar-btn"
+                            onClick={() => {
+                              const targetId = prompt('请输入目标节点ID:');
+                              if (targetId && allEntities.find(e => e.id === targetId)) {
+                                const relation = prompt('请输入关系名称:', 'relates_to');
+                                if (relation) {
+                                  setNewNodeRelations([...newNodeRelations, {
+                                    targetId,
+                                    relation,
+                                    relationType: 'structural',
+                                    description: ''
+                                  }]);
+                                }
+                              } else if (targetId) {
+                                alert('未找到该节点ID');
+                              }
+                            }}
+                            style={{ width: '100%', marginTop: '4px' }}
+                          >
+                            <Plus size={12} />
+                            添加关联关系
+                          </button>
+                        </div>
 
-                      <Button fill intent="primary" icon={<Play size={14} />} text="测试公式计算" />
-                    </div>
-                  </div>
-                } />
-
-                <Tab id="data" title="数据源" panel={
-                  <div style={{ padding: 16 }}>
-                    <FormGroup label="数据源类型">
-                      <HTMLSelect fill defaultValue="sql">
-                        <option value="sql">SQL数据库</option>
-                        <option value="api">REST接口</option>
-                        <option value="file">CSV/Excel文件</option>
-                        <option value="stream">事件流</option>
-                      </HTMLSelect>
-                    </FormGroup>
-
-                    <FormGroup label="连接字符串">
-                      <InputGroup
-                        fill
-                        defaultValue="jdbc:postgresql://localhost:5432/lithium_db"
-                      />
-                    </FormGroup>
-
-                    <FormGroup label="表名">
-                      <InputGroup
-                        fill
-                        defaultValue={`tbl_${selectedEntity.id}`}
-                      />
-                    </FormGroup>
-
-                    <Divider />
-
-                    <Button fill minimal icon={<Database size={14} />} text="测试连接" />
-                  </div>
-                } />
-
-                <Tab id="perms" title="权限" panel={
-                  <div style={{ padding: 16 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                      访问控制
-                    </div>
-                    <Checkbox className="bp5-small" label="仅管理员可编辑" defaultChecked />
-                    <Checkbox className="bp5-small" label="允许只读访问" defaultChecked />
-                    <Checkbox className="bp5-small" label="需要数据脱敏" />
-                  </div>
-                } />
-              </Tabs>
-            </>
-          ) : (
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--text-tertiary)',
-            }}>
-              <Braces size={48} strokeWidth={1} />
-              <div style={{ marginTop: 16, fontSize: 12 }}>选择一个实体进行编辑</div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 底部约束校验/推演测试面板 */}
-      <div style={{
-        height: showValidationPanel ? 200 : 40,
-        background: '#fff',
-        borderTop: '1px solid var(--palantir-border)',
-        transition: 'height 0.3s ease',
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
-        {/* 面板头部 */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 16px',
-          borderBottom: showValidationPanel ? '1px solid var(--palantir-border)' : 'none',
-          background: '#F8F9FA',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Button
-             
-              minimal
-              icon={<ChevronDown size={16} style={{ transform: showValidationPanel ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }} />}
-              onClick={() => setShowValidationPanel(!showValidationPanel)}
-            />
-            <span style={{ fontSize: 12, fontWeight: 600 }}>约束校验与推演测试</span>
-            {validationResults.length > 0 && (
-              <div style={{ display: 'flex', gap: 8 }}>
-                {validationResults.some(r => r.severity === 'error') && (
-                  <Tag intent="danger" style={{ fontSize: 10 }}>{validationResults.filter(r => r.severity === 'error').length} 错误</Tag>
-                )}
-                {validationResults.some(r => r.severity === 'warning') && (
-                  <Tag intent="warning" style={{ fontSize: 10 }}>{validationResults.filter(r => r.severity === 'warning').length} 警告</Tag>
-                )}
-                {validationResults.some(r => r.severity === 'info') && (
-                  <Tag intent="primary" style={{ fontSize: 10 }}>{validationResults.filter(r => r.severity === 'info').length} 信息</Tag>
-                )}
-              </div>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Button
-              small
-              minimal
-              active={showASTPanel}
-              onClick={() => setShowASTPanel(!showASTPanel)}
-              icon={<Braces size={14} />}
-              title="显示/隐藏 DSL AST"
-            >
-              DSL AST
-            </Button>
-            <Button small minimal onClick={validateConstraints} icon={<CheckCircle2 size={14} />}>重新校验</Button>
-            <Button small minimal onClick={runSimulation} loading={isSimulating} icon={<Play size={14} />}>运行推演</Button>
-          </div>
-        </div>
-
-        {/* 面板内容 */}
-        {showValidationPanel && (
-          <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-            {/* 校验结果 */}
-            <div style={{ flex: 1, padding: 16, borderRight: '1px solid var(--palantir-border)', overflow: 'auto' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 12, color: 'var(--text-secondary)' }}>
-                校验结果
-              </div>
-              {validationResults.length === 0 ? (
-                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center', padding: 20 }}>
-                  点击"验证"或"重新校验"开始检查约束
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {validationResults.map((result, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        padding: 10,
-                        borderRadius: 2,
-                        border: `1px solid ${
-                          result.severity === 'error' ? '#fecaca' :
-                          result.severity === 'warning' ? '#fed7aa' : '#bfdbfe'
-                        }`,
-                        background: result.severity === 'error' ? '#fef2f2' :
-                                   result.severity === 'warning' ? '#fff7ed' : '#eff6ff',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        {result.severity === 'error' && <XCircle size={14} color="#dc2626" />}
-                        {result.severity === 'warning' && <AlertTriangle size={14} color="#ea580c" />}
-                        {result.severity === 'info' && <Info size={14} color="#2563eb" />}
-                        <div>
-                          <div style={{ fontSize: 12, color: '#182026' }}>{result.message}</div>
-                          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                            类型: {result.type}{result.constraintId && ` | 约束ID: ${result.constraintId}`}
+                        {/* 约束配置 */}
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                            约束规则
+                          </label>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {constraintLibrary
+                              .filter(c => c.applicableDomains.includes(selectedNodeType.domain))
+                              .map(libItem => {
+                                const isSelected = newNodeConstraints.includes(libItem.id);
+                                return (
+                                  <button
+                                    key={libItem.id}
+                                    onClick={() => {
+                                      if (isSelected) {
+                                        setNewNodeConstraints(newNodeConstraints.filter(id => id !== libItem.id));
+                                      } else {
+                                        setNewNodeConstraints([...newNodeConstraints, libItem.id]);
+                                      }
+                                    }}
+                                    style={{
+                                      padding: '4px 10px',
+                                      borderRadius: '4px',
+                                      fontSize: '11px',
+                                      border: isSelected ? '1px solid #3b82f6' : '1px solid #334155',
+                                      background: isSelected ? 'rgba(59, 130, 246, 0.2)' : '#0f172a',
+                                      color: isSelected ? '#3b82f6' : '#94a3b8',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    {isSelected ? '✓ ' : ''}{libItem.name}
+                                  </button>
+                                );
+                              })}
                           </div>
+                          {newNodeConstraints.length === 0 && (
+                            <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
+                              点击上方按钮选择要应用的约束规则
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    )}
 
-            {/* AST 与求解器映射 */}
-            {showASTPanel && generatedAST && (
-              <div style={{ flex: 1, padding: 16, borderRight: '1px solid var(--palantir-border)', overflow: 'auto', background: '#fafafa' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Braces size={14} />
-                  DSL AST 语法树
-                  <Tag minimal intent="primary" style={{ fontSize: 10 }}>{generatedAST.category}</Tag>
-                </div>
-                <pre style={{
-                  fontSize: 10,
-                  fontFamily: 'monospace',
-                  background: '#fff',
-                  padding: 12,
-                  borderRadius: 4,
-                  border: '1px solid var(--palantir-border)',
-                  overflow: 'auto',
-                  maxHeight: 120
-                }}>
-                  {JSON.stringify(generatedAST, null, 2)}
-                </pre>
-                {solverMapping && (
-                  <>
-                    <div style={{ fontSize: 11, fontWeight: 600, marginTop: 12, marginBottom: 8, color: 'var(--text-secondary)' }}>
-                      求解器映射 ({solverMapping.solverType})
-                    </div>
-                    <div style={{
-                      fontSize: 10,
-                      fontFamily: 'monospace',
-                      background: '#fff',
-                      padding: 12,
-                      borderRadius: 4,
-                      border: '1px solid var(--palantir-border)'
-                    }}>
-                      <div style={{ color: '#166534' }}>// {solverMapping.originalDsl}</div>
-                      <div style={{ marginTop: 4 }}>
-                        <span style={{ color: '#7c3aed' }}>type:</span> {solverMapping.constraintMapping.type}
-                      </div>
-                      <div>
-                        <span style={{ color: '#7c3aed' }}>lhs:</span> {solverMapping.constraintMapping.lhs}
-                      </div>
-                      <div>
-                        <span style={{ color: '#7c3aed' }}>rhs:</span> {solverMapping.constraintMapping.rhs}
-                      </div>
-                      <div>
-                        <span style={{ color: '#7c3aed' }}>op:</span> {solverMapping.constraintMapping.operator}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* 推演测试 */}
-            <div style={{ flex: 1, padding: 16, overflow: 'auto' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 12, color: 'var(--text-secondary)' }}>
-                推演测试结果
-              </div>
-              {isSimulating ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, gap: 8 }}>
-                  <div className="bp3-spinner bp3-small">
-                    <div className="bp3-spinner-animation" />
-                  </div>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>正在推演...</span>
-                </div>
-              ) : constraints.filter(c => c.status === 'active').length === 0 ? (
-                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center', padding: 20 }}>
-                  暂无激活的约束用于推演
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {constraints.filter(c => c.status === 'active').map(constraint => {
-                    // 模拟推演结果
-                    const passed = Math.random() > 0.3;
-                    return (
-                      <div
-                        key={constraint.id}
-                        style={{
-                          padding: 10,
-                          borderRadius: 2,
-                          border: `1px solid ${passed ? '#bbf7d0' : '#fecaca'}`,
-                          background: passed ? '#f0fdf4' : '#fef2f2',
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                      <button
+                        className="toolbar-btn"
+                        onClick={() => {
+                          setShowAddNodeDialog(false);
+                          setSelectedNodeType(null);
+                          setNewNodeConfig({ id: '', displayName: '', properties: [], parentId: '', status: 'active', tags: [] });
+                          setNewNodeRelations([]);
+                          setNewNodeConstraints([]);
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {passed ? <CheckCircle2 size={14} color="#16a34a" /> : <XCircle size={14} color="#dc2626" />}
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 12, fontWeight: 500, color: '#182026' }}>{constraint.name}</div>
-                            <div style={{ fontSize: 11, color: passed ? '#166534' : '#991b1b' }}>
-                              {passed ? '检查通过' : '违反约束'}
-                            </div>
-                          </div>
-                          <Tag minimal intent={constraint.type === 'hard' ? 'danger' : constraint.type === 'soft' ? 'warning' : 'success'} style={{ fontSize: 10 }}>
-                            {constraint.type === 'hard' ? '硬' : constraint.type === 'soft' ? '软' : '目标'}
-                          </Tag>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        取消
+                      </button>
+                      {selectedNodeType && (
+                        <button
+                          className="toolbar-btn"
+                          onClick={() => setSelectedNodeType(null)}
+                        >
+                          返回选择
+                        </button>
+                      )}
+                      {selectedNodeType && (
+                        <button
+                          className="toolbar-btn primary"
+                          onClick={createNewEntity}
+                          disabled={!newNodeConfig.id || !newNodeConfig.displayName}
+                        >
+                          创建节点
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
+
+              {/* 添加关联关系对话框 */}
+              {showAddRelationDialog && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000
+                }}>
+                  <div style={{
+                    background: '#1e293b',
+                    borderRadius: '12px',
+                    padding: '24px',
+                    width: '500px',
+                    maxWidth: '90%',
+                    border: '1px solid #334155'
+                  }}>
+                    <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#f1f5f9' }}>
+                      添加关联关系
+                    </h3>
+
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                        源节点（当前实体）
+                      </label>
+                      <input
+                        type="text"
+                        value={selectedEntity?.displayName || ''}
+                        readOnly
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          background: '#0f172a',
+                          border: '1px solid #334155',
+                          borderRadius: '6px',
+                          color: '#94a3b8',
+                          fontSize: '13px'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                        目标节点 <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <select
+                        value={relationConfig.target}
+                        onChange={(e) => setRelationConfig({ ...relationConfig, target: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          background: '#0f172a',
+                          border: '1px solid #334155',
+                          borderRadius: '6px',
+                          color: '#e2e8f0',
+                          fontSize: '13px'
+                        }}
+                      >
+                        <option value="">选择目标节点...</option>
+                        {allEntities.filter(e => e.id !== selectedEntity?.id).map(entity => (
+                          <option key={entity.id} value={entity.id}>
+                            {entity.displayName} ({entity.domainName})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                        关系类型 <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <select
+                        value={relationConfig.relationType}
+                        onChange={(e) => setRelationConfig({ ...relationConfig, relationType: e.target.value as any })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          background: '#0f172a',
+                          border: '1px solid #334155',
+                          borderRadius: '6px',
+                          color: '#e2e8f0',
+                          fontSize: '13px',
+                          marginBottom: '8px'
+                        }}
+                      >
+                        <option value="structural">结构关系</option>
+                        <option value="flow">流程关系</option>
+                        <option value="control">控制关系</option>
+                        <option value="temporal">时间关系</option>
+                        <option value="causal">因果关系</option>
+                        <option value="reference">引用关系</option>
+                      </select>
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                        关系名称 <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={relationConfig.relation}
+                        onChange={(e) => setRelationConfig({ ...relationConfig, relation: e.target.value })}
+                        placeholder="例如：contains、produces、controls"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          background: '#0f172a',
+                          border: '1px solid #334155',
+                          borderRadius: '6px',
+                          color: '#e2e8f0',
+                          fontSize: '13px'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                        关系描述
+                      </label>
+                      <input
+                        type="text"
+                        value={relationConfig.description}
+                        onChange={(e) => setRelationConfig({ ...relationConfig, description: e.target.value })}
+                        placeholder="描述此关系的含义..."
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          background: '#0f172a',
+                          border: '1px solid #334155',
+                          borderRadius: '6px',
+                          color: '#e2e8f0',
+                          fontSize: '13px'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                      <button
+                        className="toolbar-btn"
+                        onClick={() => {
+                          setShowAddRelationDialog(false);
+                          setRelationConfig({
+                            source: '',
+                            target: '',
+                            relation: '',
+                            relationType: 'structural',
+                            description: ''
+                          });
+                        }}
+                      >
+                        取消
+                      </button>
+                      <button
+                        className="toolbar-btn primary"
+                        onClick={createNewRelation}
+                        disabled={!relationConfig.target || !relationConfig.relation}
+                      >
+                        创建关联
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
+          </>
+        ) : (
+          <div className="empty-state">
+            <Database size={48} className="empty-icon" />
+            <p>选择左侧实体查看详情</p>
           </div>
         )}
       </div>
-
-      {/* 添加实体弹窗 */}
-      <Dialog
-        isOpen={showAddEntityDialog}
-        onClose={() => setShowAddEntityDialog(false)}
-        title="添加新实体"
-        style={{ width: 400 }}
-      >
-        <div style={{ padding: 20 }}>
-          <FormGroup label="添加到目录">
-            <div style={{
-              padding: '8px 12px',
-              background: '#F8F9FA',
-              borderRadius: 4,
-              fontSize: 13,
-              color: '#182026',
-            }}>
-              {selectedDomain?.displayName || 'Manufacturing'}
-            </div>
-          </FormGroup>
-
-          <FormGroup label="实体名称">
-            <InputGroup
-              placeholder="输入实体名称"
-              value={newEntityName}
-              onChange={(e) => setNewEntityName(e.target.value)}
-              fill
-            />
-          </FormGroup>
-
-          <FormGroup label="实体类型">
-            <HTMLSelect
-              fill
-              value={newEntityType}
-              onChange={(e) => setNewEntityType(e.target.value as any)}
-            >
-              <option value="Object_Type">对象类型</option>
-              <option value="Relation_Type">关系类型</option>
-              <option value="Attribute_Type">属性类型</option>
-            </HTMLSelect>
-          </FormGroup>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-            <Button onClick={() => setShowAddEntityDialog(false)}>
-              取消
-            </Button>
-            <Button
-              intent="primary"
-              onClick={handleAddEntity}
-              disabled={!newEntityName.trim()}
-            >
-              添加
-            </Button>
-          </div>
-        </div>
-      </Dialog>
     </div>
   );
 }

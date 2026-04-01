@@ -10,17 +10,20 @@
 // ============================================
 
 export const ASTNodeTypeEnum = [
-  'Literal',      // 字面量
-  'Field',        // 字段引用
-  'BinaryOp',     // 二元运算
-  'UnaryOp',      // 一元运算
-  'Comparison',   // 比较运算
-  'Aggregation',  // 聚合运算
-  'Condition',    // 条件
-  'IfThen',       // 条件分支
-  'TimeRelation', // 时间关系
-  'LogicalOp',    // 逻辑运算
-  'FunctionCall', // 函数调用
+  'Literal',           // 字面量
+  'Field',             // 字段引用
+  'BinaryOp',          // 二元运算
+  'UnaryOp',           // 一元运算
+  'Comparison',        // 比较运算
+  'Aggregation',       // 聚合运算
+  'Condition',         // 条件
+  'IfThen',            // 条件分支
+  'TimeRelation',      // 时间关系
+  'TemporalConstraint', // 时态约束（新增）
+  'DerivedProperty',   // 派生属性（新增）
+  'ActionTrigger',     // Action 触发器（新增）
+  'LogicalOp',         // 逻辑运算
+  'FunctionCall',      // 函数调用
 ] as const;
 
 export type ASTNodeType = typeof ASTNodeTypeEnum[number];
@@ -87,6 +90,45 @@ export const TimeRelationEnum = [
 ] as const;
 
 export type TimeRelation = typeof TimeRelationEnum[number];
+
+// ============================================
+// 2.1 时态约束类型（新增）
+// ============================================
+
+export const TemporalConstraintTypeEnum = [
+  'TIME_WINDOW',       // 时间窗口
+  'DEADLINE',          // 截止时间
+  'RELEASE_TIME',      // 释放时间
+  'MIN_DURATION',      // 最短持续时间
+  'MAX_DURATION',      // 最长持续时间
+  'EXACT_DURATION',    // 精确持续时间
+  'MIN_GAP',           // 最小间隔
+  'MAX_GAP',           // 最大间隔
+  'PERIODIC',          // 周期性
+] as const;
+
+export type TemporalConstraintType = typeof TemporalConstraintTypeEnum[number];
+
+// 派生规则类型
+export const DerivedRuleTypeEnum = [
+  'CALCULATED',        // 计算属性
+  'AGGREGATED',        // 聚合属性
+  'INFERRED',          // 推断属性
+  'TRANSITIVE',        // 传递关系
+  'EVENT_TRIGGERED',   // 事件触发
+] as const;
+
+export type DerivedRuleType = typeof DerivedRuleTypeEnum[number];
+
+// Action 触发模式
+export const ActionTriggerModeEnum = [
+  'MANUAL',            // 手动触发
+  'AUTOMATIC',         // 自动触发
+  'SCHEDULED',         // 定时触发
+  'EVENT_DRIVEN',      // 事件驱动
+] as const;
+
+export type ActionTriggerMode = typeof ActionTriggerModeEnum[number];
 
 // ============================================
 // 3. AST 节点接口定义
@@ -167,6 +209,102 @@ export interface TimeRelationNode extends ASTNode {
   left: FieldNode;             // 左时间字段（如 task1.end_time）
   right: FieldNode;            // 右时间字段（如 task2.start_time）
   offset?: LiteralNode;        // 可选偏移量
+}
+
+// ============================================
+// 3.1 时态约束节点（新增）
+// ============================================
+
+// 时态约束 AST 节点
+export interface TemporalConstraintNode extends ASTNode {
+  type: 'TemporalConstraint';
+  constraintType: TemporalConstraintType;
+  targetEntity: FieldNode;     // 目标实体时间字段
+  referenceEntity?: FieldNode; // 参考实体时间字段（相对约束）
+  parameters: {
+    duration?: number;         // 持续时间（分钟）
+    minDuration?: number;
+    maxDuration?: number;
+    gap?: number;              // 间隔时间
+    minGap?: number;
+    maxGap?: number;
+    timeWindow?: {
+      start: string;
+      end: string;
+    };
+    periodic?: {
+      interval: number;
+      unit: 'minute' | 'hour' | 'day' | 'week' | 'month';
+    };
+  };
+  violationAction: 'block' | 'warn' | 'auto_adjust' | 'notify';
+}
+
+// ============================================
+// 3.2 派生属性节点（新增）
+// ============================================
+
+// 派生属性 AST 节点
+export interface DerivedPropertyNode extends ASTNode {
+  type: 'DerivedProperty';
+  ruleType: DerivedRuleType;
+  targetProperty: FieldNode;   // 目标属性
+  formula: ASTNode | AggregationDerivedNode | InferenceRuleNode;  // 计算公式（支持多种类型）
+  dependencies: FieldNode[];   // 依赖属性列表
+  refreshStrategy: {
+    mode: 'realtime' | 'on_demand' | 'scheduled';
+    cron?: string;
+    eventTriggers?: string[];
+  };
+}
+
+// 聚合计算节点（不继承 ASTNode，作为辅助类型使用）
+export interface AggregationDerivedNode {
+  type: 'AggregationDerived';
+  func: AggregationFunction;
+  target: FieldNode;
+  filter?: ConditionNode;
+  groupBy?: FieldNode[];
+}
+
+// 推理规则节点（不继承 ASTNode，作为辅助类型使用）
+export interface InferenceRuleNode {
+  type: 'InferenceRule';
+  conditions: ASTNode[];       // 条件列表
+  conclusion: ASTNode;         // 结论
+  confidence: number;          // 置信度
+}
+
+// ============================================
+// 3.3 Action 触发器节点（新增）
+// ============================================
+
+// Action 触发器 AST 节点
+export interface ActionTriggerNode extends ASTNode {
+  type: 'ActionTrigger';
+  actionType: string;          // Action 类型
+  triggerMode: ActionTriggerMode;
+  conditions: ASTNode[];       // 触发条件
+  preconditions: ASTNode[];    // 前置条件
+  operations: ActionOperationNode[];
+  postEffects: ActionEffectNode[];
+}
+
+// Action 操作节点（不继承 ASTNode，作为辅助类型使用）
+export interface ActionOperationNode {
+  type: 'ActionOperation';
+  operationType: 'update_property' | 'create_link' | 'delete_link' | 'create_entity' | 'call_service' | 'emit_event';
+  target: string;
+  parameters: Record<string, ASTNode>;
+  order: number;
+}
+
+// Action 效果节点（不继承 ASTNode，作为辅助类型使用）
+export interface ActionEffectNode {
+  type: 'ActionEffect';
+  effectType: 'property_update' | 'event_emit' | 'state_transition';
+  target: FieldNode | string;
+  value?: ASTNode;
 }
 
 // 逻辑运算节点
@@ -314,6 +452,293 @@ export function createTimeRelation(
     right: parseField(right),
     offset: offset !== undefined ? createLiteral(offset, 'float') : undefined,
   };
+}
+
+/**
+ * 创建二元运算节点
+ */
+export function createBinaryOp(
+  operator: BinaryOperator,
+  left: ASTNode,
+  right: ASTNode
+): BinaryOpNode {
+  return {
+    type: 'BinaryOp',
+    operator,
+    left,
+    right,
+  };
+}
+
+/**
+ * 创建字段引用节点（快捷函数）
+ */
+export function createField(entity: string, field: string): FieldNode {
+  return {
+    type: 'Field',
+    entity,
+    field,
+    path: [],
+  };
+}
+
+// ============================================
+// 6.1 时态约束工厂函数（新增）
+// ============================================
+
+/**
+ * 创建时间窗口约束
+ * 例：任务必须在 [08:00, 18:00] 之间执行
+ */
+export function createTimeWindowConstraint(
+  entityField: string,
+  startTime: string,
+  endTime: string,
+  violationAction: 'block' | 'warn' | 'auto_adjust' | 'notify' = 'block'
+): TemporalConstraintNode {
+  return {
+    type: 'TemporalConstraint',
+    constraintType: 'TIME_WINDOW',
+    targetEntity: parseField(entityField),
+    parameters: {
+      timeWindow: { start: startTime, end: endTime },
+    },
+    violationAction,
+  };
+}
+
+/**
+ * 创建持续时间约束
+ * 例：任务持续时间必须在 [min, max] 之间
+ */
+export function createDurationConstraint(
+  entityField: string,
+  minDuration?: number,
+  maxDuration?: number,
+  exactDuration?: number,
+  violationAction: 'block' | 'warn' | 'auto_adjust' | 'notify' = 'block'
+): TemporalConstraintNode {
+  let constraintType: TemporalConstraintType = 'EXACT_DURATION';
+  if (minDuration !== undefined && maxDuration !== undefined) {
+    constraintType = 'MIN_DURATION'; // 实际使用时会同时检查 min 和 max
+  } else if (minDuration !== undefined) {
+    constraintType = 'MIN_DURATION';
+  } else if (maxDuration !== undefined) {
+    constraintType = 'MAX_DURATION';
+  }
+
+  return {
+    type: 'TemporalConstraint',
+    constraintType,
+    targetEntity: parseField(entityField),
+    parameters: {
+      minDuration,
+      maxDuration,
+      duration: exactDuration,
+    },
+    violationAction,
+  };
+}
+
+/**
+ * 创建时间间隔约束
+ * 例：任务A结束后，任务B必须在 [min, max] 分钟后开始
+ */
+export function createTimeGapConstraint(
+  sourceField: string,
+  targetField: string,
+  minGap?: number,
+  maxGap?: number,
+  violationAction: 'block' | 'warn' | 'auto_adjust' | 'notify' = 'block'
+): TemporalConstraintNode {
+  return {
+    type: 'TemporalConstraint',
+    constraintType: minGap !== undefined ? 'MIN_GAP' : 'MAX_GAP',
+    targetEntity: parseField(targetField),
+    referenceEntity: parseField(sourceField),
+    parameters: {
+      minGap,
+      maxGap,
+    },
+    violationAction,
+  };
+}
+
+/**
+ * 创建周期性约束
+ * 例：设备必须每 8 小时维护一次
+ */
+export function createPeriodicConstraint(
+  entityField: string,
+  interval: number,
+  unit: 'minute' | 'hour' | 'day' | 'week' | 'month',
+  violationAction: 'block' | 'warn' | 'auto_adjust' | 'notify' = 'block'
+): TemporalConstraintNode {
+  return {
+    type: 'TemporalConstraint',
+    constraintType: 'PERIODIC',
+    targetEntity: parseField(entityField),
+    parameters: {
+      periodic: { interval, unit },
+    },
+    violationAction,
+  };
+}
+
+// ============================================
+// 6.2 派生规则工厂函数（新增）
+// ============================================
+
+/**
+ * 创建计算属性派生规则
+ * 例：OEE = 实际产量 / 理论产能 * 100
+ */
+export function createCalculatedProperty(
+  targetProperty: string,
+  formula: ASTNode,
+  dependencies: string[],
+  refreshMode: 'realtime' | 'on_demand' | 'scheduled' = 'realtime',
+  cron?: string
+): DerivedPropertyNode {
+  return {
+    type: 'DerivedProperty',
+    ruleType: 'CALCULATED',
+    targetProperty: parseField(targetProperty),
+    formula,
+    dependencies: dependencies.map(parseField),
+    refreshStrategy: {
+      mode: refreshMode,
+      cron,
+    },
+  };
+}
+
+/**
+ * 创建聚合属性派生规则
+ * 例：总产量 = SUM(批次.产量)
+ */
+export function createAggregatedProperty(
+  targetProperty: string,
+  func: AggregationFunction,
+  sourceField: string,
+  filter?: ConditionNode,
+  groupBy?: string[],
+  refreshMode: 'realtime' | 'on_demand' | 'scheduled' = 'on_demand'
+): DerivedPropertyNode {
+  const aggNode: AggregationDerivedNode = {
+    type: 'AggregationDerived',
+    func,
+    target: parseField(sourceField),
+    filter,
+    groupBy: groupBy?.map(parseField),
+  };
+
+  return {
+    type: 'DerivedProperty',
+    ruleType: 'AGGREGATED',
+    targetProperty: parseField(targetProperty),
+    formula: aggNode,
+    dependencies: [parseField(sourceField)],
+    refreshStrategy: {
+      mode: refreshMode,
+    },
+  };
+}
+
+/**
+ * 创建推理规则
+ * 例：IF 温度 > 80°C AND 压力 > 5bar THEN 状态 = '危险'
+ */
+export function createInferenceRule(
+  conditions: ASTNode[],
+  conclusion: ASTNode,
+  confidence: number = 1.0
+): InferenceRuleNode {
+  return {
+    type: 'InferenceRule',
+    conditions,
+    conclusion,
+    confidence,
+  };
+}
+
+// ============================================
+// 6.3 Action 工厂函数（新增）
+// ============================================
+
+/**
+ * 创建 Action 触发器
+ * 例：当订单优先级为高时，自动分配给最快产线
+ */
+export function createActionTrigger(
+  actionType: string,
+  triggerMode: ActionTriggerMode,
+  conditions: ASTNode[],
+  operations: ActionOperationNode[],
+  preconditions: ASTNode[] = [],
+  postEffects: ActionEffectNode[] = []
+): ActionTriggerNode {
+  return {
+    type: 'ActionTrigger',
+    actionType,
+    triggerMode,
+    conditions,
+    preconditions,
+    operations,
+    postEffects,
+  };
+}
+
+/**
+ * 创建 Action 操作
+ */
+export function createActionOperation(
+  operationType: ActionOperationNode['operationType'],
+  target: string,
+  parameters: Record<string, ASTNode>,
+  order: number = 0
+): ActionOperationNode {
+  return {
+    type: 'ActionOperation',
+    operationType,
+    target,
+    parameters,
+    order,
+  };
+}
+
+/**
+ * 创建状态转换 Action
+ * 例：设备从 '空闲' 转换为 '运行中'
+ */
+export function createStateTransitionAction(
+  entity: string,
+  fromState: string,
+  toState: string,
+  triggerConditions: ASTNode[]
+): ActionTriggerNode {
+  const operation = createActionOperation(
+    'update_property',
+    `${entity}.state`,
+    { value: createLiteral(toState, 'string') },
+    0
+  );
+
+  const effect: ActionEffectNode = {
+    type: 'ActionEffect',
+    effectType: 'state_transition',
+    target: entity,
+    value: createLiteral(toState, 'string'),
+  };
+
+  return createActionTrigger(
+    'state_transition',
+    'EVENT_DRIVEN',
+    triggerConditions,
+    [operation],
+    [],
+    [effect]
+  );
 }
 
 // ============================================
