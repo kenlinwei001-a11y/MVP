@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Dashboard from './pages/Dashboard';
-import Chat from './pages/Chat';
+import AgentConversation from './pages/AgentConversation';
 import Settings from './pages/Settings';
 import Configuration from './pages/Configuration';
 
@@ -16,7 +16,7 @@ function App() {
   return (
     <div className="min-h-screen bg-white">
       {currentPage === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
-      {currentPage === 'chat' && <Chat onNavigate={handleNavigate} />}
+      {currentPage === 'chat' && <AgentConversation onNavigate={handleNavigate} />}
       {currentPage === 'settings' && <Settings onNavigate={handleNavigate} />}
       {currentPage === 'configuration' && <Configuration onNavigate={handleNavigate} />}
     </div>

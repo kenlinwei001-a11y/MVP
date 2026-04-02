@@ -76,6 +76,7 @@ interface OntologyEntity {
   updated_at?: string;
   created_by?: string;
   parent_id?: string;
+  base_id?: string;  // 所属基地ID
   metadata?: Record<string, any>;
 }
 
@@ -338,20 +339,76 @@ const createEntity = (
 // ===== 1. 组织资源域 (Organization) =====
 const orgEntities: OntologyEntity[] = [
   createEntity('company', '集团公司', 'org', '组织资源域', 'building', '集团总部', [
-    { key: 'company_code', value: 'CATL', type: 'string' },
-    { key: 'company_name', value: '宁德时代', type: 'string' },
-    { key: 'established', value: '2011', type: 'string' },
-  ], { metadata: { employees: 100000, factories: 13 } }),
+    { key: 'company_code', value: 'CALB', type: 'string' },
+    { key: 'company_name', value: '中创新航', type: 'string' },
+    { key: 'established', value: '2007', type: 'string' },
+  ], { metadata: { employees: 15000, bases: 6 } }),
 
-  createEntity('base_hq', '宁德基地', 'org', '组织资源域', 'building', '总部制造基地', [
-    { key: 'base_code', value: 'BASE-NB', type: 'string' },
-    { key: 'location', value: '福建宁德', type: 'string' },
-    { key: 'total_area', value: 500000, unit: '㎡', type: 'number' },
-    { key: 'total_capacity', value: 370, unit: 'GWh/年', type: 'number' },
-    { key: 'employee_count', value: 15000, unit: '人', type: 'number' },
+  // 中创新航六大基地
+  createEntity('base_cz', '常州基地', 'org', '组织资源域', 'building', '总部制造基地', [
+    { key: 'base_code', value: 'BASE-CZ', type: 'string' },
+    { key: 'location', value: '江苏常州', type: 'string' },
+    { key: 'total_area', value: 1200000, unit: '㎡', type: 'number' },
+    { key: 'total_capacity', value: 70, unit: 'GWh/年', type: 'number' },
+    { key: 'employee_count', value: 5000, unit: '人', type: 'number' },
+    { key: 'utilization_rate', value: 88, unit: '%', type: 'number' },
+  ], {
+    metadata: { base_type: '总部基地', planning_capacity_2025: '100GWh', products: 'LFP, NCM' }
+  }),
+
+  createEntity('base_xm', '厦门基地', 'org', '组织资源域', 'building', '厦门制造基地', [
+    { key: 'base_code', value: 'BASE-XM', type: 'string' },
+    { key: 'location', value: '福建厦门', type: 'string' },
+    { key: 'total_area', value: 800000, unit: '㎡', type: 'number' },
+    { key: 'total_capacity', value: 50, unit: 'GWh/年', type: 'number' },
+    { key: 'employee_count', value: 3000, unit: '人', type: 'number' },
+    { key: 'utilization_rate', value: 82, unit: '%', type: 'number' },
+  ], {
+    metadata: { base_type: '区域基地', planning_capacity_2025: '80GWh', products: 'LFP' }
+  }),
+
+  createEntity('base_lz', '柳州基地', 'org', '组织资源域', 'building', '柳州制造基地', [
+    { key: 'base_code', value: 'BASE-LZ', type: 'string' },
+    { key: 'location', value: '广西柳州', type: 'string' },
+    { key: 'total_area', value: 600000, unit: '㎡', type: 'number' },
+    { key: 'total_capacity', value: 35, unit: 'GWh/年', type: 'number' },
+    { key: 'employee_count', value: 2000, unit: '人', type: 'number' },
+    { key: 'utilization_rate', value: 75, unit: '%', type: 'number' },
+  ], {
+    metadata: { base_type: '区域基地', planning_capacity_2025: '50GWh', products: 'LFP' }
+  }),
+
+  createEntity('base_yc', '盐城基地', 'org', '组织资源域', 'building', '盐城制造基地', [
+    { key: 'base_code', value: 'BASE-YC', type: 'string' },
+    { key: 'location', value: '江苏盐城', type: 'string' },
+    { key: 'total_area', value: 1000000, unit: '㎡', type: 'number' },
+    { key: 'total_capacity', value: 60, unit: 'GWh/年', type: 'number' },
+    { key: 'employee_count', value: 3500, unit: '人', type: 'number' },
+    { key: 'utilization_rate', value: 80, unit: '%', type: 'number' },
+  ], {
+    metadata: { base_type: '区域基地', planning_capacity_2025: '90GWh', products: 'LFP, NCM' }
+  }),
+
+  createEntity('base_cd', '成都基地', 'org', '组织资源域', 'building', '成都制造基地', [
+    { key: 'base_code', value: 'BASE-CD', type: 'string' },
+    { key: 'location', value: '四川成都', type: 'string' },
+    { key: 'total_area', value: 700000, unit: '㎡', type: 'number' },
+    { key: 'total_capacity', value: 40, unit: 'GWh/年', type: 'number' },
+    { key: 'employee_count', value: 2500, unit: '人', type: 'number' },
+    { key: 'utilization_rate', value: 78, unit: '%', type: 'number' },
+  ], {
+    metadata: { base_type: '区域基地', planning_capacity_2025: '60GWh', products: 'LFP' }
+  }),
+
+  createEntity('base_wh', '武汉基地', 'org', '组织资源域', 'building', '武汉制造基地', [
+    { key: 'base_code', value: 'BASE-WH', type: 'string' },
+    { key: 'location', value: '湖北武汉', type: 'string' },
+    { key: 'total_area', value: 900000, unit: '㎡', type: 'number' },
+    { key: 'total_capacity', value: 55, unit: 'GWh/年', type: 'number' },
+    { key: 'employee_count', value: 3200, unit: '人', type: 'number' },
     { key: 'utilization_rate', value: 85, unit: '%', type: 'number' },
   ], {
-    metadata: { certifications: 'ISO9001,IATF16949,ISO14001', planning_capacity_2025: '500GWh' }
+    metadata: { base_type: '区域基地', planning_capacity_2025: '80GWh', products: 'LFP, NCM' }
   }),
 
   createEntity('factory_a', '极片工厂', 'org', '组织资源域', 'factory', '前段极片制造工厂', [
@@ -361,7 +418,7 @@ const orgEntities: OntologyEntity[] = [
     { key: 'annual_capacity', value: 120, unit: 'GWh', type: 'number' },
     { key: 'workshop_count', value: 4, unit: '个', type: 'number' },
     { key: 'line_count', value: 32, unit: '条', type: 'number' },
-  ], { parent_id: 'base_hq', dependencies: ['base_hq'] }),
+  ], { parent_id: 'base_cz', dependencies: ['base_cz'], base_id: 'base_cz' }),
 
   createEntity('factory_b', '电芯工厂', 'org', '组织资源域', 'factory', '中段电芯组装工厂', [
     { key: 'factory_code', value: 'FAC-B', type: 'string' },
@@ -370,7 +427,7 @@ const orgEntities: OntologyEntity[] = [
     { key: 'annual_capacity', value: 150, unit: 'GWh', type: 'number' },
     { key: 'workshop_count', value: 6, unit: '个', type: 'number' },
     { key: 'line_count', value: 48, unit: '条', type: 'number' },
-  ], { parent_id: 'base_hq', dependencies: ['base_hq', 'factory_a'] }),
+  ], { parent_id: 'base_cz', dependencies: ['base_cz', 'factory_a'], base_id: 'base_cz' }),
 
   createEntity('factory_c', '模组PACK工厂', 'org', '组织资源域', 'factory', '后段模组PACK工厂', [
     { key: 'factory_code', value: 'FAC-C', type: 'string' },
@@ -379,7 +436,7 @@ const orgEntities: OntologyEntity[] = [
     { key: 'annual_capacity', value: 100, unit: 'GWh', type: 'number' },
     { key: 'workshop_count', value: 3, unit: '个', type: 'number' },
     { key: 'line_count', value: 24, unit: '条', type: 'number' },
-  ], { parent_id: 'base_hq', dependencies: ['base_hq', 'factory_b'] }),
+  ], { parent_id: 'base_cz', dependencies: ['base_cz', 'factory_b'], base_id: 'base_cz' }),
 
   createEntity('workshop_front', '前段车间', 'org', '组织资源域', 'layers', '极片制造车间', [
     { key: 'workshop_code', value: 'WS-FRONT-01', type: 'string' },
@@ -387,7 +444,7 @@ const orgEntities: OntologyEntity[] = [
     { key: 'area', value: 25000, unit: '㎡', type: 'number' },
     { key: 'cleanliness', value: '十万级', type: 'string' },
     { key: 'line_count', value: 8, unit: '条', type: 'number' },
-  ], { parent_id: 'factory_a' }),
+  ], { parent_id: 'factory_a', base_id: 'base_cz' }),
 
   createEntity('workshop_middle', '中段车间', 'org', '组织资源域', 'layers', '电芯组装车间', [
     { key: 'workshop_code', value: 'WS-MID-01', type: 'string' },
@@ -395,14 +452,14 @@ const orgEntities: OntologyEntity[] = [
     { key: 'area', value: 35000, unit: '㎡', type: 'number' },
     { key: 'cleanliness', value: '万级', type: 'string' },
     { key: 'line_count', value: 8, unit: '条', type: 'number' },
-  ], { parent_id: 'factory_b' }),
+  ], { parent_id: 'factory_b', base_id: 'base_cz' }),
 
   createEntity('workshop_back', '后段车间', 'org', '组织资源域', 'layers', '化成PACK车间', [
     { key: 'workshop_code', value: 'WS-BACK-01', type: 'string' },
     { key: 'workshop_type', value: '后段车间', type: 'string' },
     { key: 'area', value: 20000, unit: '㎡', type: 'number' },
     { key: 'line_count', value: 8, unit: '条', type: 'number' },
-  ], { parent_id: 'factory_c' }),
+  ], { parent_id: 'factory_c', base_id: 'base_cz' }),
 
   createEntity('employee', '员工', 'org', '组织资源域', 'activity', '企业员工', [
     { key: 'employee_code', value: 'EMP001', type: 'string' },
@@ -551,7 +608,7 @@ const supplyEntities: OntologyEntity[] = [
     { key: 'capacity', value: 10000, unit: '托', type: 'number' },
     { key: 'utilization', value: 75, unit: '%', type: 'number' },
     { key: 'temperature_zone', value: '常温', type: 'string' },
-  ], { parent_id: 'base_hq' }),
+  ], { parent_id: 'base_cz', base_id: 'base_cz' }),
 
   createEntity('location', '库位', 'supply', '供应链域', 'activity', '仓库库位', [
     { key: 'location_code', value: 'LOC-A-01-01', type: 'string' },
@@ -560,7 +617,7 @@ const supplyEntities: OntologyEntity[] = [
     { key: 'shelf', value: '01', type: 'string' },
     { key: 'layer', value: '01', type: 'string' },
     { key: 'location_type', value: '存储', type: 'string' },
-  ], { parent_id: 'warehouse' }),
+  ], { parent_id: 'warehouse', base_id: 'base_cz' }),
 
   createEntity('inventory', '库存', 'supply', '供应链域', 'database', '库存记录', [
     { key: 'inventory_id', value: 'INV-001', type: 'string' },
@@ -771,11 +828,11 @@ const initialDomains: OntologyDomain[] = [
 
 const initialLinks: OntologyLink[] = [
   // ==================== 组织层级关系 (structural) ====================
-  { id: 'l001', source: 'company', target: 'base_hq', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '公司包含基地', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
-  { id: 'l002', source: 'base_hq', target: 'factory_a', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含工厂', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
-  { id: 'l003', source: 'base_hq', target: 'factory_b', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含工厂', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
-  { id: 'l004', source: 'base_hq', target: 'factory_c', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含工厂', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
-  { id: 'l005', source: 'base_hq', target: 'warehouse', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含仓库', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '设施'] },
+  { id: 'l001', source: 'company', target: 'base_cz', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '公司包含基地', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
+  { id: 'l002', source: 'base_cz', target: 'factory_a', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含工厂', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
+  { id: 'l003', source: 'base_cz', target: 'factory_b', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含工厂', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
+  { id: 'l004', source: 'base_cz', target: 'factory_c', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含工厂', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
+  { id: 'l005', source: 'base_cz', target: 'warehouse', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含仓库', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '设施'] },
   { id: 'l006', source: 'factory_a', target: 'workshop_front', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '工厂包含车间', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '设施'] },
   { id: 'l007', source: 'factory_b', target: 'workshop_middle', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '工厂包含车间', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '设施'] },
   { id: 'l008', source: 'factory_c', target: 'workshop_back', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '工厂包含车间', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '设施'] },
@@ -891,7 +948,7 @@ const initialConstraints: Constraint[] = [
 const OntologyNodeCard: React.FC<{ data: OntologyEntity }> = ({ data }) => {
   return (
     <div className="ontology-node-palantir">
-      <Handle type="target" position={Position.Left} style={{ left: -5, top: '50%', transform: 'translateY(-50%)', width: 8, height: 8, background: '#3b82f6', border: '1.5px solid #1e293b' }} />
+      <Handle type="target" position={Position.Left} style={{ left: -5, top: '50%', transform: 'translateY(-50%)', width: 8, height: 8, background: '#3b82f6', border: '1.5px solid #ffffff' }} />
       <div className="ontology-node-header-palantir">
         <div className={`status-indicator ${data.status}`} />
         {data.icon === 'battery' && <Battery size={12} />}
@@ -924,7 +981,7 @@ const OntologyNodeCard: React.FC<{ data: OntologyEntity }> = ({ data }) => {
           <div className="more-properties">+{data.properties.length - 2}</div>
         )}
       </div>
-      <Handle type="source" position={Position.Right} style={{ right: -5, top: '50%', transform: 'translateY(-50%)', width: 8, height: 8, background: '#3b82f6', border: '1.5px solid #1e293b' }} />
+      <Handle type="source" position={Position.Right} style={{ right: -5, top: '50%', transform: 'translateY(-50%)', width: 8, height: 8, background: '#3b82f6', border: '1.5px solid #ffffff' }} />
     </div>
   );
 };
@@ -1181,6 +1238,18 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
   }, [selectedEntity]);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['dom-org']));
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
+  const [selectedBase, setSelectedBase] = useState<string>('all');
+
+  // 基地列表
+  const bases = [
+    { id: 'all', name: '全部基地', code: 'ALL' },
+    { id: 'base_cz', name: '常州基地', code: 'CZ' },
+    { id: 'base_xm', name: '厦门基地', code: 'XM' },
+    { id: 'base_lz', name: '柳州基地', code: 'LZ' },
+    { id: 'base_yc', name: '盐城基地', code: 'YC' },
+    { id: 'base_cd', name: '成都基地', code: 'CD' },
+    { id: 'base_wh', name: '武汉基地', code: 'WH' },
+  ];
 
   // React Flow States
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -1222,9 +1291,22 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
     let displayEntities = allEntities;
     let displayLinks = allLinks;
 
+    // 先按基地筛选
+    if (selectedBase !== 'all') {
+      displayEntities = displayEntities.filter(e => {
+        // 直接属于该基地的实体
+        if (e.base_id === selectedBase) return true;
+        // 集团公司显示在所有基地
+        if (e.id === 'company') return true;
+        // 基地本身
+        if (e.id === selectedBase) return true;
+        return false;
+      });
+    }
+
     if (focusMode && focusedNodeId) {
       const { nodeIds, linkIds } = getRelatedNodes(focusedNodeId, 1);
-      displayEntities = allEntities.filter(e => nodeIds.has(e.id));
+      displayEntities = displayEntities.filter(e => nodeIds.has(e.id));
       displayLinks = allLinks.filter(l => linkIds.has(l.id));
 
       if (displayEntities.length === 0) {
@@ -1234,9 +1316,12 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
     } else if (selectedDomain) {
       // 显示选中域的所有实体
       const domainEntityIds = new Set(allEntities.filter(e => e.domain === selectedDomain).map(e => e.id));
-      displayEntities = allEntities.filter(e => domainEntityIds.has(e.id));
-      displayLinks = allLinks.filter(l => domainEntityIds.has(l.source) && domainEntityIds.has(l.target));
+      displayEntities = displayEntities.filter(e => domainEntityIds.has(e.id));
     }
+
+    // 过滤链接：只保留两端都在显示实体中的链接
+    const displayEntityIds = new Set(displayEntities.map(e => e.id));
+    displayLinks = allLinks.filter(l => displayEntityIds.has(l.source) && displayEntityIds.has(l.target));
 
     const flowNodes: Node[] = displayEntities.map((entity, idx) => ({
       id: entity.id,
@@ -1255,13 +1340,13 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
       markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: '#64748b' },
       style: { stroke: '#64748b', strokeWidth: 1.5 },
       labelStyle: { fill: '#94a3b8', fontSize: 10, fontWeight: 500 },
-      labelBgStyle: { fill: '#1e293b', stroke: '#475569', strokeWidth: 1 },
+      labelBgStyle: { fill: '#f1f5f9', stroke: '#475569', strokeWidth: 1 },
       labelBgPadding: [4, 8],
     }));
 
     setNodes(flowNodes);
     setEdges(flowEdges);
-  }, [allEntities, allLinks, selectedDomain, focusMode, focusedNodeId, getRelatedNodes, setNodes, setEdges]);
+  }, [allEntities, allLinks, selectedDomain, selectedBase, focusMode, focusedNodeId, getRelatedNodes, setNodes, setEdges]);
 
   // 聚焦时适应视图
   useEffect(() => {
@@ -1371,6 +1456,62 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
           <Search size={14} className="search-icon" />
           <input type="text" placeholder="搜索本体..." className="search-input" />
         </div>
+
+        {/* 基地筛选器 */}
+        <div className="base-filter" style={{
+          padding: '8px 12px',
+          borderBottom: '1px solid #e2e8f0',
+          background: '#f8fafc'
+        }}>
+          <label style={{
+            fontSize: '10px',
+            color: '#64748b',
+            textTransform: 'uppercase',
+            fontWeight: 600,
+            marginBottom: '6px',
+            display: 'block',
+            letterSpacing: '0.5px'
+          }}>
+            所属基地
+          </label>
+          <select
+            value={selectedBase}
+            onChange={(e) => {
+              setSelectedBase(e.target.value);
+              setFocusMode(false);
+              setFocusedNodeId(null);
+              setSelectedNodeId(null);
+              setSelectedEntity(null);
+            }}
+            style={{
+              width: '100%',
+              padding: '6px 8px',
+              fontSize: '12px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '4px',
+              background: '#ffffff',
+              color: '#1e293b',
+              outline: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            {bases.map(base => (
+              <option key={base.id} value={base.id}>
+                {base.code} - {base.name}
+              </option>
+            ))}
+          </select>
+          {selectedBase !== 'all' && (
+            <div style={{
+              marginTop: '6px',
+              fontSize: '10px',
+              color: '#64748b'
+            }}>
+              显示 {allEntities.filter(e => e.base_id === selectedBase || e.id === 'company' || e.id === selectedBase).length} 个实体
+            </div>
+          )}
+        </div>
+
         <div className="nav-tree-palantir">
           {renderNavTree()}
         </div>
@@ -1459,9 +1600,9 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
         minWidth: '450px',
         maxWidth: '450px',
         zIndex: 100,
-        boxShadow: '-4px 0 20px rgba(0,0,0,0.5)',
-        background: '#1e293b',
-        borderLeft: '1px solid #334155',
+        boxShadow: '-4px 0 20px rgba(0,0,0,0.1)',
+        background: '#ffffff',
+        borderLeft: '1px solid #e2e8f0',
         display: 'flex',
         flexDirection: 'column'
       }}>
@@ -1486,7 +1627,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', width: '100%', height: '40px', background: '#0f172a', borderBottom: '1px solid #334155', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', width: '100%', height: '40px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', overflow: 'hidden' }}>
               {['general', 'relations', 'constraints'].map((tab) => (
                 <button
                   key={tab}
@@ -1502,7 +1643,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                     background: activeTab === tab ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
                     border: 'none',
                     borderBottom: activeTab === tab ? '2px solid #3b82f6' : '2px solid transparent',
-                    color: activeTab === tab ? '#e2e8f0' : '#94a3b8',
+                    color: activeTab === tab ? '#3b82f6' : '#64748b',
                     cursor: 'pointer',
                     textAlign: 'center',
                     whiteSpace: 'nowrap',
@@ -1627,17 +1768,17 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                       };
                       return (
                         <div key={link.id} className="relation-row" style={{
-                          display: 'flex', alignItems: 'center', padding: '10px', background: '#0f172a',
+                          display: 'flex', alignItems: 'center', padding: '10px', background: '#f8fafc',
                           borderRadius: '6px', marginBottom: '6px', borderLeft: `3px solid ${typeColors[link.relationType]}`,
                           maxWidth: '100%', boxSizing: 'border-box'
                         }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                               <Link2 size={12} color={typeColors[link.relationType]} />
-                              <span style={{ fontSize: '12px', color: '#e2e8f0', fontWeight: 500 }}>
+                              <span style={{ fontSize: '12px', color: '#1e293b', fontWeight: 500 }}>
                                 {sourceEntity?.displayName || link.source}
                               </span>
-                              <span style={{ fontSize: '11px', color: '#94a3b8' }}>→</span>
+                              <span style={{ fontSize: '11px', color: '#64748b' }}>→</span>
                               <span style={{ fontSize: '12px', color: '#3b82f6' }}>{link.relation}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -1649,7 +1790,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                               {link.properties?.strength === 'weak' && <span style={{ fontSize: '10px', color: '#f59e0b' }}>弱关联</span>}
                               {link.properties?.temporality === 'transient' && <span style={{ fontSize: '10px', color: '#8b5cf6' }}>临时</span>}
                               {link.semantics?.map((s, i) => (
-                                <span key={i} style={{ fontSize: '10px', color: '#64748b', background: '#1e293b', padding: '1px 4px', borderRadius: '2px' }}>{s}</span>
+                                <span key={i} style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 4px', borderRadius: '2px' }}>{s}</span>
                               ))}
                             </div>
                           </div>
@@ -1672,16 +1813,16 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                       };
                       return (
                         <div key={link.id} className="relation-row" style={{
-                          display: 'flex', alignItems: 'center', padding: '10px', background: '#0f172a',
+                          display: 'flex', alignItems: 'center', padding: '10px', background: '#f8fafc',
                           borderRadius: '6px', marginBottom: '6px', borderLeft: `3px solid ${typeColors[link.relationType]}`,
                           maxWidth: '100%', boxSizing: 'border-box'
                         }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                               <span style={{ fontSize: '12px', color: '#3b82f6' }}>{link.relation}</span>
-                              <span style={{ fontSize: '11px', color: '#94a3b8' }}>→</span>
+                              <span style={{ fontSize: '11px', color: '#64748b' }}>→</span>
                               <Link2 size={12} color={typeColors[link.relationType]} />
-                              <span style={{ fontSize: '12px', color: '#e2e8f0', fontWeight: 500 }}>
+                              <span style={{ fontSize: '12px', color: '#1e293b', fontWeight: 500 }}>
                                 {targetEntity?.displayName || link.target}
                               </span>
                             </div>
@@ -1694,7 +1835,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                               {link.properties?.strength === 'weak' && <span style={{ fontSize: '10px', color: '#f59e0b' }}>弱关联</span>}
                               {link.properties?.temporality === 'transient' && <span style={{ fontSize: '10px', color: '#8b5cf6' }}>临时</span>}
                               {link.semantics?.map((s, i) => (
-                                <span key={i} style={{ fontSize: '10px', color: '#64748b', background: '#1e293b', padding: '1px 4px', borderRadius: '2px' }}>{s}</span>
+                                <span key={i} style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 4px', borderRadius: '2px' }}>{s}</span>
                               ))}
                             </div>
                           </div>
@@ -1726,7 +1867,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                         return (
                           <div key={c.id} className="constraint-item" style={{
                             padding: '12px',
-                            background: '#0f172a',
+                            background: '#f8fafc',
                             borderRadius: '6px',
                             marginBottom: '8px',
                             border: selectedConstraint?.id === c.id ? '1px solid #3b82f6' : '1px solid transparent'
@@ -1734,14 +1875,14 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <span className={`constraint-badge ${c.category}`}>{c.category}</span>
-                                <span style={{ fontSize: '12px', color: '#e2e8f0', fontWeight: 500 }}>{libraryItem?.name || c.type}</span>
+                                <span style={{ fontSize: '12px', color: '#1e293b', fontWeight: 500 }}>{libraryItem?.name || c.type}</span>
                               </div>
                               <button className="icon-btn" onClick={() => deleteConstraint(c.id)}>
                                 <X size={12} />
                               </button>
                             </div>
-                            <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>{c.description}</div>
-                            <code style={{ fontSize: '11px', color: '#60a5fa', background: '#1e293b', padding: '4px 8px', borderRadius: '4px', display: 'block' }}>
+                            <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>{c.description}</div>
+                            <code style={{ fontSize: '11px', color: '#60a5fa', background: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', display: 'block' }}>
                               {c.expression}
                             </code>
                           </div>
@@ -1767,16 +1908,16 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                   zIndex: 1000
                 }}>
                   <div style={{
-                    background: '#1e293b',
+                    background: '#f1f5f9',
                     borderRadius: '12px',
                     padding: '24px',
                     width: '500px',
                     maxWidth: '90%',
                     maxHeight: '80vh',
                     overflow: 'auto',
-                    border: '1px solid #334155'
+                    border: '1px solid #e2e8f0'
                   }}>
-                    <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#f1f5f9' }}>
+                    <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#1e293b' }}>
                       从约束库添加
                       <span style={{ fontSize: '12px', color: '#64748b', marginLeft: '8px', fontWeight: 'normal' }}>
                         适用于当前实体的约束
@@ -1786,7 +1927,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                     {/* 适用约束列表 */}
                     <div style={{ marginBottom: '16px' }}>
                       {getApplicableConstraints().length === 0 ? (
-                        <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
                           当前领域暂无适用约束，请在约束库中添加
                         </div>
                       ) : (
@@ -1798,16 +1939,16 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                               onClick={() => !isAlreadyAdded && setSelectedLibraryItem(item)}
                               style={{
                                 padding: '12px',
-                                background: isAlreadyAdded ? '#0f172a' : (selectedLibraryItem?.id === item.id ? 'rgba(59, 130, 246, 0.2)' : '#0f172a'),
+                                background: isAlreadyAdded ? '#f8fafc' : (selectedLibraryItem?.id === item.id ? 'rgba(59, 130, 246, 0.2)' : '#f8fafc'),
                                 borderRadius: '8px',
                                 marginBottom: '8px',
-                                border: selectedLibraryItem?.id === item.id ? '1px solid #3b82f6' : '1px solid #334155',
+                                border: selectedLibraryItem?.id === item.id ? '1px solid #3b82f6' : '1px solid #e2e8f0',
                                 cursor: isAlreadyAdded ? 'not-allowed' : 'pointer',
                                 opacity: isAlreadyAdded ? 0.5 : 1
                               }}
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                <span style={{ fontSize: '13px', fontWeight: 500, color: '#e2e8f0' }}>{item.name}</span>
+                                <span style={{ fontSize: '13px', fontWeight: 500, color: '#1e293b' }}>{item.name}</span>
                                 <span style={{
                                   padding: '2px 8px',
                                   borderRadius: '4px',
@@ -1818,8 +1959,8 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                                   {item.category}
                                 </span>
                               </div>
-                              <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>{item.description}</div>
-                              <code style={{ fontSize: '10px', color: '#60a5fa', background: '#1e293b', padding: '2px 6px', borderRadius: '3px' }}>
+                              <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>{item.description}</div>
+                              <code style={{ fontSize: '10px', color: '#60a5fa', background: '#f1f5f9', padding: '2px 6px', borderRadius: '3px' }}>
                                 {item.expression}
                               </code>
                               {isAlreadyAdded && (
@@ -1868,16 +2009,16 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                   zIndex: 1000
                 }}>
                   <div style={{
-                    background: '#1e293b',
+                    background: '#f1f5f9',
                     borderRadius: '12px',
                     padding: '24px',
                     width: '600px',
                     maxWidth: '90%',
                     maxHeight: '90vh',
                     overflow: 'auto',
-                    border: '1px solid #334155'
+                    border: '1px solid #e2e8f0'
                   }}>
-                    <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#f1f5f9' }}>
+                    <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#1e293b' }}>
                       添加新节点
                       <span style={{ fontSize: '12px', color: '#64748b', marginLeft: '8px', fontWeight: 'normal' }}>
                         从节点类型库选择
@@ -1887,7 +2028,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                     {!selectedNodeType ? (
                       /* 第一步：选择节点类型 */
                       <div style={{ marginBottom: '16px' }}>
-                        <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '12px' }}>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
                           请选择要创建的节点类型：
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
@@ -1907,20 +2048,20 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                               }}
                               style={{
                                 padding: '12px',
-                                background: '#0f172a',
+                                background: '#f8fafc',
                                 borderRadius: '8px',
-                                border: '1px solid #334155',
+                                border: '1px solid #e2e8f0',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s'
                               }}
                             >
-                              <div style={{ fontSize: '13px', fontWeight: 500, color: '#e2e8f0', marginBottom: '4px' }}>
+                              <div style={{ fontSize: '13px', fontWeight: 500, color: '#1e293b', marginBottom: '4px' }}>
                                 {item.name}
                               </div>
                               <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>
                                 {item.domainName}
                               </div>
-                              <div style={{ fontSize: '10px', color: '#94a3b8' }}>
+                              <div style={{ fontSize: '10px', color: '#64748b' }}>
                                 {item.description}
                               </div>
                             </div>
@@ -1937,16 +2078,16 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                           marginBottom: '16px',
                           border: '1px solid rgba(59, 130, 246, 0.3)'
                         }}>
-                          <div style={{ fontSize: '13px', fontWeight: 500, color: '#e2e8f0' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 500, color: '#1e293b' }}>
                             已选择：{selectedNodeType.name}
                           </div>
-                          <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>
                             {selectedNodeType.domainName} · {selectedNodeType.description}
                           </div>
                         </div>
 
                         <div style={{ marginBottom: '12px' }}>
-                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                             节点ID <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <input
@@ -1957,17 +2098,17 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                             style={{
                               width: '100%',
                               padding: '10px 12px',
-                              background: '#0f172a',
-                              border: '1px solid #334155',
+                              background: '#f8fafc',
+                              border: '1px solid #e2e8f0',
                               borderRadius: '6px',
-                              color: '#e2e8f0',
+                              color: '#1e293b',
                               fontSize: '13px'
                             }}
                           />
                         </div>
 
                         <div style={{ marginBottom: '12px' }}>
-                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                             显示名称 <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <input
@@ -1978,17 +2119,17 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                             style={{
                               width: '100%',
                               padding: '10px 12px',
-                              background: '#0f172a',
-                              border: '1px solid #334155',
+                              background: '#f8fafc',
+                              border: '1px solid #e2e8f0',
                               borderRadius: '6px',
-                              color: '#e2e8f0',
+                              color: '#1e293b',
                               fontSize: '13px'
                             }}
                           />
                         </div>
 
                         <div style={{ marginBottom: '16px' }}>
-                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                             属性值
                           </label>
                           {newNodeConfig.properties.map((prop, idx) => (
@@ -2000,10 +2141,10 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                                 style={{
                                   flex: 1,
                                   padding: '8px 12px',
-                                  background: '#0f172a',
-                                  border: '1px solid #334155',
+                                  background: '#f8fafc',
+                                  border: '1px solid #e2e8f0',
                                   borderRadius: '6px',
-                                  color: '#94a3b8',
+                                  color: '#64748b',
                                   fontSize: '12px'
                                 }}
                               />
@@ -2019,10 +2160,10 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                                 style={{
                                   flex: 1,
                                   padding: '8px 12px',
-                                  background: '#0f172a',
-                                  border: '1px solid #334155',
+                                  background: '#f8fafc',
+                                  border: '1px solid #e2e8f0',
                                   borderRadius: '6px',
-                                  color: '#e2e8f0',
+                                  color: '#1e293b',
                                   fontSize: '12px'
                                 }}
                               />
@@ -2037,7 +2178,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
 
                         {/* 父节点选择 */}
                         <div style={{ marginBottom: '12px' }}>
-                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                             父节点（层级关系）
                           </label>
                           <select
@@ -2046,10 +2187,10 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                             style={{
                               width: '100%',
                               padding: '10px 12px',
-                              background: '#0f172a',
-                              border: '1px solid #334155',
+                              background: '#f8fafc',
+                              border: '1px solid #e2e8f0',
                               borderRadius: '6px',
-                              color: '#e2e8f0',
+                              color: '#1e293b',
                               fontSize: '13px'
                             }}
                           >
@@ -2069,7 +2210,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
 
                         {/* 节点状态 */}
                         <div style={{ marginBottom: '12px' }}>
-                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                             节点状态
                           </label>
                           <select
@@ -2078,10 +2219,10 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                             style={{
                               width: '100%',
                               padding: '10px 12px',
-                              background: '#0f172a',
-                              border: '1px solid #334155',
+                              background: '#f8fafc',
+                              border: '1px solid #e2e8f0',
                               borderRadius: '6px',
-                              color: '#e2e8f0',
+                              color: '#1e293b',
                               fontSize: '13px'
                             }}
                           >
@@ -2093,19 +2234,19 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
 
                         {/* 关联关系配置 */}
                         <div style={{ marginBottom: '16px' }}>
-                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                             关联关系配置
                           </label>
                           {newNodeRelations.map((rel, idx) => (
                             <div key={idx} style={{
                               padding: '10px',
-                              background: '#0f172a',
+                              background: '#f8fafc',
                               borderRadius: '6px',
                               marginBottom: '8px',
-                              border: '1px solid #334155'
+                              border: '1px solid #e2e8f0'
                             }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                <span style={{ fontSize: '12px', color: '#e2e8f0' }}>
+                                <span style={{ fontSize: '12px', color: '#1e293b' }}>
                                   → {allEntities.find(e => e.id === rel.targetId)?.displayName || rel.targetId}
                                 </span>
                                 <button
@@ -2147,7 +2288,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
 
                         {/* 约束配置 */}
                         <div style={{ marginBottom: '16px' }}>
-                          <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                             约束规则
                           </label>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -2169,8 +2310,8 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                                       padding: '4px 10px',
                                       borderRadius: '4px',
                                       fontSize: '11px',
-                                      border: isSelected ? '1px solid #3b82f6' : '1px solid #334155',
-                                      background: isSelected ? 'rgba(59, 130, 246, 0.2)' : '#0f172a',
+                                      border: isSelected ? '1px solid #3b82f6' : '1px solid #e2e8f0',
+                                      background: isSelected ? 'rgba(59, 130, 246, 0.2)' : '#f8fafc',
                                       color: isSelected ? '#3b82f6' : '#94a3b8',
                                       cursor: 'pointer'
                                     }}
@@ -2239,19 +2380,19 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                   zIndex: 1000
                 }}>
                   <div style={{
-                    background: '#1e293b',
+                    background: '#f1f5f9',
                     borderRadius: '12px',
                     padding: '24px',
                     width: '500px',
                     maxWidth: '90%',
-                    border: '1px solid #334155'
+                    border: '1px solid #e2e8f0'
                   }}>
-                    <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#f1f5f9' }}>
+                    <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#1e293b' }}>
                       添加关联关系
                     </h3>
 
                     <div style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                         源节点（当前实体）
                       </label>
                       <input
@@ -2261,17 +2402,17 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          background: '#0f172a',
-                          border: '1px solid #334155',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '6px',
-                          color: '#94a3b8',
+                          color: '#64748b',
                           fontSize: '13px'
                         }}
                       />
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                         目标节点 <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <select
@@ -2280,10 +2421,10 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          background: '#0f172a',
-                          border: '1px solid #334155',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '6px',
-                          color: '#e2e8f0',
+                          color: '#1e293b',
                           fontSize: '13px'
                         }}
                       >
@@ -2297,7 +2438,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                         关系类型 <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <select
@@ -2306,10 +2447,10 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          background: '#0f172a',
-                          border: '1px solid #334155',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '6px',
-                          color: '#e2e8f0',
+                          color: '#1e293b',
                           fontSize: '13px',
                           marginBottom: '8px'
                         }}
@@ -2324,7 +2465,7 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                         关系名称 <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
@@ -2335,17 +2476,17 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          background: '#0f172a',
-                          border: '1px solid #334155',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '6px',
-                          color: '#e2e8f0',
+                          color: '#1e293b',
                           fontSize: '13px'
                         }}
                       />
                     </div>
 
                     <div style={{ marginBottom: '24px' }}>
-                      <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
                         关系描述
                       </label>
                       <input
@@ -2356,10 +2497,10 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          background: '#0f172a',
-                          border: '1px solid #334155',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '6px',
-                          color: '#e2e8f0',
+                          color: '#1e293b',
                           fontSize: '13px'
                         }}
                       />

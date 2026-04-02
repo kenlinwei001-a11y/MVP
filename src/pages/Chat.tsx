@@ -18,6 +18,7 @@ const agents = [
   { id: 'agent_001', name: '电池需求预测智能体', icon: Bot, status: 'active', description: '需求预测' },
   { id: 'agent_002', name: '产能排程优化智能体', icon: Bot, status: 'active', description: '排程优化' },
   { id: 'agent_003', name: '异常检测与告警智能体', icon: Bot, status: 'draft', description: '异常检测' },
+  { id: 'agent_capacity_forecast', name: '产线产能预测智能体', icon: Bot, status: 'active', description: '产能预测' },
   { id: 'default', name: '默认助手', icon: Brain, status: 'active', description: '通用对话' },
 ];
 

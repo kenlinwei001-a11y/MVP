@@ -240,13 +240,13 @@ export default function MCPConfiguration() {
   const formatPercent = (p: number) => `${(p * 100).toFixed(1)}%`;
 
   return (
-    <div className="h-full flex flex-col text-sm bg-[#1e293b]">
+    <div className="h-full flex flex-col text-sm bg-[#f8fafc]">
       {/* Toolbar - Palantir风格紧凑工具栏 */}
-      <div className="h-9 px-3 border-b border-[#334155] flex items-center justify-between bg-[#334155] shrink-0">
+      <div className="h-9 px-3 border-b border-[#e2e8f0] flex items-center justify-between bg-white shrink-0">
         <div className="flex items-center gap-3">
           {/* Command Palette 风格搜索 */}
           <div
-            className="flex items-center gap-2 px-2 py-1 bg-[#1e293b] rounded-sm border border-[#3d5166] cursor-text min-w-[280px]"
+            className="flex items-center gap-2 px-2 py-1 bg-[#f8fafc] rounded-sm border border-[#e2e8f0] cursor-text min-w-[280px]"
             onClick={() => setShowCommandPalette(true)}
           >
             <Command size={12} className="text-[#64748b]" />
@@ -258,7 +258,7 @@ export default function MCPConfiguration() {
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="text-[10px] text-[#94a3b8] hover:text-[#f1f5f9]"
+              className="text-[10px] text-[#64748b] hover:text-[#1e293b]"
             >
               清除
             </button>
@@ -277,28 +277,28 @@ export default function MCPConfiguration() {
       </div>
 
       {/* Stats Bar - 数据指标 */}
-      <div className="h-8 px-3 border-b border-[#334155] flex items-center gap-6 bg-[#1e293b] text-[10px] shrink-0">
+      <div className="h-8 px-3 border-b border-[#e2e8f0] flex items-center gap-6 bg-[#f8fafc] text-[10px] shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-[#f1f5f9] font-mono text-xs">{stats.total}</span>
-          <span className="text-[#94a3b8]">工具</span>
+          <span className="text-[#1e293b] font-mono text-xs">{stats.total}</span>
+          <span className="text-[#64748b]">工具</span>
         </div>
-        <div className="h-3 w-px bg-[#334155]" />
+        <div className="h-3 w-px bg-white" />
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-          <span className="text-[#f1f5f9] font-mono">{stats.active}</span>
-          <span className="text-[#94a3b8]">运行中</span>
+          <span className="text-[#1e293b] font-mono">{stats.active}</span>
+          <span className="text-[#64748b]">运行中</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
-          <span className="text-[#f1f5f9] font-mono">{stats.beta}</span>
-          <span className="text-[#94a3b8]">Beta</span>
+          <span className="text-[#1e293b] font-mono">{stats.beta}</span>
+          <span className="text-[#64748b]">Beta</span>
         </div>
         {stats.deprecated > 0 && (
           <>
-            <div className="h-3 w-px bg-[#334155]" />
+            <div className="h-3 w-px bg-white" />
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
-              <span className="text-[#f1f5f9] font-mono">{stats.deprecated}</span>
+              <span className="text-[#1e293b] font-mono">{stats.deprecated}</span>
               <span className="text-[#ef4444]">已弃用</span>
             </div>
           </>
@@ -308,9 +308,9 @@ export default function MCPConfiguration() {
       {/* 3-Panel Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - 分类导航 */}
-        <div className="w-44 bg-[#334155] border-r border-[#3d5166] flex flex-col shrink-0">
-          <div className="h-8 px-3 border-b border-[#3d5166] flex items-center">
-            <span className="text-[10px] font-semibold text-[#cbd5e1] uppercase tracking-wider">分类</span>
+        <div className="w-44 bg-white border-r border-[#e2e8f0] flex flex-col shrink-0">
+          <div className="h-8 px-3 border-b border-[#e2e8f0] flex items-center">
+            <span className="text-[10px] font-semibold text-[#475569] uppercase tracking-wider">分类</span>
           </div>
           <div className="flex-1 overflow-auto py-1">
             <button
@@ -318,11 +318,11 @@ export default function MCPConfiguration() {
               className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors ${
                 selectedCategory === 'all'
                   ? 'bg-[#3b82f6]/20 text-[#ffffff]'
-                  : 'text-[#cbd5e1] hover:bg-[#475569] hover:text-[#ffffff]'
+                  : 'text-[#475569] hover:bg-[#f1f5f9] hover:text-[#1e293b]'
               }`}
             >
               <span>全部</span>
-              <span className="text-[10px] text-[#94a3b8] font-mono">{tools.length}</span>
+              <span className="text-[10px] text-[#64748b] font-mono">{tools.length}</span>
             </button>
             {Object.entries(categoryLabels).map(([key, label]) => (
               <button
@@ -331,14 +331,14 @@ export default function MCPConfiguration() {
                 className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors ${
                   selectedCategory === key
                     ? 'bg-[#3b82f6]/20 text-[#ffffff]'
-                    : 'text-[#cbd5e1] hover:bg-[#475569] hover:text-[#ffffff]'
+                    : 'text-[#475569] hover:bg-[#f1f5f9] hover:text-[#1e293b]'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: categoryColors[key] }} />
                   <span>{label}</span>
                 </div>
-                <span className="text-[10px] text-[#94a3b8] font-mono">
+                <span className="text-[10px] text-[#64748b] font-mono">
                   {tools.filter(t => t.category === key).length}
                 </span>
               </button>
@@ -347,9 +347,9 @@ export default function MCPConfiguration() {
         </div>
 
         {/* Center Panel - 工具列表 (紧凑表格) */}
-        <div className="flex-1 flex flex-col min-w-0 bg-[#1e293b]">
+        <div className="flex-1 flex flex-col min-w-0 bg-[#f8fafc]">
           {/* 表头 */}
-          <div className="h-8 px-3 border-b border-[#334155] flex items-center bg-[#253449] text-[10px] text-[#94a3b8] shrink-0">
+          <div className="h-8 px-3 border-b border-[#e2e8f0] flex items-center bg-white text-[10px] text-[#64748b] shrink-0">
             <div className="w-8" />
             <div className="flex-1 min-w-0">工具ID / 名称</div>
             <div className="w-20 text-center">状态</div>
@@ -365,10 +365,10 @@ export default function MCPConfiguration() {
               <div
                 key={tool.id}
                 onClick={() => handleSelectTool(tool)}
-                className={`h-9 px-3 flex items-center border-b border-[#334155] cursor-pointer transition-colors ${
+                className={`h-9 px-3 flex items-center border-b border-[#e2e8f0] cursor-pointer transition-colors ${
                   selectedTool?.id === tool.id
                     ? 'bg-[#3b82f6]/10 border-l-2 border-l-[#3b82f6]'
-                    : 'hover:bg-[#253449] border-l-2 border-l-transparent'
+                    : 'hover:bg-white border-l-2 border-l-transparent'
                 }`}
               >
                 {/* 图标 */}
@@ -385,7 +385,7 @@ export default function MCPConfiguration() {
                 <div className="flex-1 min-w-0 pr-4">
                   <div className="flex items-baseline gap-2">
                     <code className="text-[10px] text-[#64748b] font-mono truncate">{tool.id}</code>
-                    <span className="text-xs text-[#f1f5f9] truncate">{tool.name}</span>
+                    <span className="text-xs text-[#1e293b] truncate">{tool.name}</span>
                   </div>
                 </div>
 
@@ -402,7 +402,7 @@ export default function MCPConfiguration() {
 
                 {/* 依赖 */}
                 <div className="w-24 text-right">
-                  <span className="text-xs text-[#94a3b8] font-mono">
+                  <span className="text-xs text-[#64748b] font-mono">
                     {tool.dependencies.length > 0 ? `${tool.dependencies.length} 个` : '-'}
                   </span>
                 </div>
@@ -418,7 +418,7 @@ export default function MCPConfiguration() {
 
                 {/* 限流 */}
                 <div className="w-20 text-right">
-                  <span className="text-xs text-[#94a3b8] font-mono">
+                  <span className="text-xs text-[#64748b] font-mono">
                     {tool.config.rate_limit || '-'}
                   </span>
                 </div>
@@ -440,14 +440,14 @@ export default function MCPConfiguration() {
           </div>
 
           {/* Footer */}
-          <div className="h-7 px-3 border-t border-[#334155] flex items-center justify-between bg-[#253449] text-[10px] text-[#94a3b8] shrink-0">
+          <div className="h-7 px-3 border-t border-[#e2e8f0] flex items-center justify-between bg-white text-[10px] text-[#64748b] shrink-0">
             <span>显示 {filteredTools.length} 个工具</span>
             <span className="font-mono">{selectedTool ? `选中: ${selectedTool.id}` : '未选择'}</span>
           </div>
         </div>
 
         {/* Right Panel - 详情/编辑面板 */}
-        <div className="w-96 bg-[#334155] border-l border-[#3d5166] flex flex-col shrink-0">
+        <div className="w-96 bg-white border-l border-[#e2e8f0] flex flex-col shrink-0">
           {!selectedTool && !isEditing ? (
             <div className="flex-1 flex flex-col items-center justify-center text-[#64748b]">
               <Cpu size={48} className="mb-4 opacity-30" />
@@ -457,14 +457,14 @@ export default function MCPConfiguration() {
           ) : (
             <>
               {/* 面板头部 */}
-              <div className="h-10 px-3 border-b border-[#3d5166] flex items-center justify-between bg-[#334155] shrink-0">
+              <div className="h-10 px-3 border-b border-[#e2e8f0] flex items-center justify-between bg-white shrink-0">
                 <div className="flex items-center gap-2">
                   {isEditing ? (
                     <Edit2 size={14} className="text-[#3b82f6]" />
                   ) : (
-                    <Settings size={14} className="text-[#94a3b8]" />
+                    <Settings size={14} className="text-[#64748b]" />
                   )}
-                  <span className="text-xs font-medium text-[#f1f5f9]">
+                  <span className="text-xs font-medium text-[#1e293b]">
                     {isEditing ? '编辑工具' : '工具详情'}
                   </span>
                 </div>
@@ -472,7 +472,7 @@ export default function MCPConfiguration() {
                   {!isEditing && selectedTool && (
                     <button
                       onClick={handleEdit}
-                      className="px-2 py-1 text-[10px] text-[#cbd5e1] hover:text-[#ffffff] hover:bg-[#475569] rounded-sm"
+                      className="px-2 py-1 text-[10px] text-[#475569] hover:text-[#1e293b] hover:bg-[#f1f5f9] rounded-sm"
                     >
                       编辑
                     </button>
@@ -481,7 +481,7 @@ export default function MCPConfiguration() {
                     <>
                       <button
                         onClick={() => setIsEditing(false)}
-                        className="px-2 py-1 text-[10px] text-[#94a3b8] hover:text-[#f1f5f9]"
+                        className="px-2 py-1 text-[10px] text-[#64748b] hover:text-[#1e293b]"
                       >
                         取消
                       </button>
@@ -500,14 +500,14 @@ export default function MCPConfiguration() {
               <div className="flex-1 overflow-auto p-3 space-y-3">
                 {/* 基本信息 */}
                 <div className="space-y-2">
-                  <label className="text-[10px] text-[#94a3b8] uppercase">工具ID</label>
+                  <label className="text-[10px] text-[#64748b] uppercase">工具ID</label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={editData.id}
                       onChange={(e) => setEditData({ ...editData, id: e.target.value })}
                       disabled={!!selectedTool}
-                      className="w-full px-2 py-1.5 bg-[#0f172a] border border-[#334155] rounded-sm text-xs text-[#f1f5f9] font-mono outline-none focus:border-[#3b82f6]"
+                      className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] font-mono outline-none focus:border-[#3b82f6]"
                     />
                   ) : (
                     <code className="block text-xs text-[#64748b] font-mono">{selectedTool?.id}</code>
@@ -515,49 +515,49 @@ export default function MCPConfiguration() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] text-[#94a3b8] uppercase">名称</label>
+                  <label className="text-[10px] text-[#64748b] uppercase">名称</label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={editData.name}
                       onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                      className="w-full px-2 py-1.5 bg-[#0f172a] border border-[#334155] rounded-sm text-xs text-[#f1f5f9] outline-none focus:border-[#3b82f6]"
+                      className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] outline-none focus:border-[#3b82f6]"
                     />
                   ) : (
-                    <p className="text-xs text-[#f1f5f9]">{selectedTool?.name}</p>
+                    <p className="text-xs text-[#1e293b]">{selectedTool?.name}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] text-[#94a3b8] uppercase">描述</label>
+                  <label className="text-[10px] text-[#64748b] uppercase">描述</label>
                   {isEditing ? (
                     <textarea
                       value={editData.description}
                       onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                       rows={2}
-                      className="w-full px-2 py-1.5 bg-[#0f172a] border border-[#334155] rounded-sm text-xs text-[#f1f5f9] outline-none focus:border-[#3b82f6] resize-none"
+                      className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] outline-none focus:border-[#3b82f6] resize-none"
                     />
                   ) : (
-                    <p className="text-xs text-[#cbd5e1]">{selectedTool?.description}</p>
+                    <p className="text-xs text-[#475569]">{selectedTool?.description}</p>
                   )}
                 </div>
 
                 {/* 依赖项 */}
-                <div className="border border-[#3d5166] rounded-sm p-3 bg-[#253449]">
-                  <h4 className="text-[10px] text-[#94a3b8] uppercase mb-2">依赖项</h4>
+                <div className="border border-[#e2e8f0] rounded-sm p-3 bg-white">
+                  <h4 className="text-[10px] text-[#64748b] uppercase mb-2">依赖项</h4>
                   {isEditing ? (
                     <input
                       type="text"
                       value={editData.dependencies.join(', ')}
                       onChange={(e) => setEditData({ ...editData, dependencies: e.target.value.split(',').map(k => k.trim()).filter(Boolean) })}
-                      className="w-full px-2 py-1.5 bg-[#0f172a] border border-[#334155] rounded-sm text-xs text-[#f1f5f9] outline-none focus:border-[#3b82f6]"
+                      className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] outline-none focus:border-[#3b82f6]"
                       placeholder="tool_id1, tool_id2, package_name"
                     />
                   ) : (
                     <div className="flex flex-wrap gap-1">
                       {selectedTool?.dependencies.length ? (
                         selectedTool.dependencies.map((dep, idx) => (
-                          <span key={idx} className="px-2 py-0.5 bg-[#1e293b] text-[#94a3b8] text-[10px] rounded font-mono">{dep}</span>
+                          <span key={idx} className="px-2 py-0.5 bg-[#f8fafc] text-[#64748b] text-[10px] rounded font-mono">{dep}</span>
                         ))
                       ) : (
                         <span className="text-[10px] text-[#64748b]">无依赖</span>
@@ -567,33 +567,33 @@ export default function MCPConfiguration() {
                 </div>
 
                 {/* 配置参数 */}
-                <div className="border border-[#3d5166] rounded-sm p-3 bg-[#253449]">
-                  <h4 className="text-[10px] text-[#94a3b8] uppercase mb-2">运行配置</h4>
+                <div className="border border-[#e2e8f0] rounded-sm p-3 bg-white">
+                  <h4 className="text-[10px] text-[#64748b] uppercase mb-2">运行配置</h4>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-[#94a3b8]">超时</span>
+                      <span className="text-[10px] text-[#64748b]">超时</span>
                       {isEditing ? (
                         <input
                           type="number"
                           value={editData.config.timeout}
                           onChange={(e) => setEditData({ ...editData, config: { ...editData.config, timeout: parseInt(e.target.value) } })}
-                          className="w-20 px-2 py-1 bg-[#0f172a] border border-[#334155] rounded-sm text-xs text-[#f1f5f9] font-mono text-right outline-none"
+                          className="w-20 px-2 py-1 bg-[#f8fafc] border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] font-mono text-right outline-none"
                         />
                       ) : (
-                        <span className="text-xs font-mono text-[#f1f5f9]">{selectedTool?.config.timeout}ms</span>
+                        <span className="text-xs font-mono text-[#1e293b]">{selectedTool?.config.timeout}ms</span>
                       )}
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-[#94a3b8]">重试次数</span>
+                      <span className="text-[10px] text-[#64748b]">重试次数</span>
                       {isEditing ? (
                         <input
                           type="number"
                           value={editData.config.retries}
                           onChange={(e) => setEditData({ ...editData, config: { ...editData.config, retries: parseInt(e.target.value) } })}
-                          className="w-20 px-2 py-1 bg-[#0f172a] border border-[#334155] rounded-sm text-xs text-[#f1f5f9] font-mono text-right outline-none"
+                          className="w-20 px-2 py-1 bg-[#f8fafc] border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] font-mono text-right outline-none"
                         />
                       ) : (
-                        <span className="text-xs font-mono text-[#f1f5f9]">{selectedTool?.config.retries}</span>
+                        <span className="text-xs font-mono text-[#1e293b]">{selectedTool?.config.retries}</span>
                       )}
                     </div>
                   </div>
@@ -601,9 +601,9 @@ export default function MCPConfiguration() {
 
                 {/* Schema 预览 */}
                 {!isEditing && selectedTool && (
-                  <div className="border border-[#3d5166] rounded-sm p-3 bg-[#253449]">
-                    <h4 className="text-[10px] text-[#94a3b8] uppercase mb-2">输入 Schema</h4>
-                    <pre className="text-[10px] text-[#cbd5e1] font-mono overflow-x-auto">
+                  <div className="border border-[#e2e8f0] rounded-sm p-3 bg-white">
+                    <h4 className="text-[10px] text-[#64748b] uppercase mb-2">输入 Schema</h4>
+                    <pre className="text-[10px] text-[#475569] font-mono overflow-x-auto">
                       {JSON.stringify(selectedTool.input_schema, null, 2)}
                     </pre>
                   </div>
@@ -621,10 +621,10 @@ export default function MCPConfiguration() {
           onClick={() => setShowCommandPalette(false)}
         >
           <div
-            className="w-[500px] bg-[#334155] rounded-sm shadow-2xl border border-[#3d5166]"
+            className="w-[500px] bg-white rounded-sm shadow-2xl border border-[#e2e8f0]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-[#3d5166]">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-[#e2e8f0]">
               <Command size={14} className="text-[#64748b]" />
               <input
                 type="text"
@@ -632,9 +632,9 @@ export default function MCPConfiguration() {
                 placeholder="搜索工具或使用命令 (>create, >filter, >sort)..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 bg-transparent border-none outline-none text-xs text-[#f1f5f9]"
+                className="flex-1 bg-transparent border-none outline-none text-xs text-[#1e293b]"
               />
-              <span className="text-[10px] text-[#64748b] px-1.5 py-0.5 bg-[#1e293b] rounded">ESC</span>
+              <span className="text-[10px] text-[#64748b] px-1.5 py-0.5 bg-[#f8fafc] rounded">ESC</span>
             </div>
             <div className="max-h-[300px] overflow-auto py-1">
               {filteredTools.slice(0, 5).map((tool) => (
@@ -648,7 +648,7 @@ export default function MCPConfiguration() {
                 >
                   <Cpu size={14} className="text-[#64748b]" />
                   <div className="flex-1">
-                    <div className="text-xs text-[#f1f5f9]">{tool.name}</div>
+                    <div className="text-xs text-[#1e293b]">{tool.name}</div>
                     <code className="text-[10px] text-[#64748b]">{tool.id}</code>
                   </div>
                 </button>
@@ -659,7 +659,7 @@ export default function MCPConfiguration() {
                 </div>
               )}
             </div>
-            <div className="px-3 py-2 border-t border-[#3d5166] flex items-center gap-4 text-[10px] text-[#64748b]">
+            <div className="px-3 py-2 border-t border-[#e2e8f0] flex items-center gap-4 text-[10px] text-[#64748b]">
               <span>↑↓ 导航</span>
               <span>↵ 选择</span>
               <span className="ml-auto">{filteredTools.length} 个结果</span>

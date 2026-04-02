@@ -3,8 +3,15 @@ import {
   Sparkles, Plus, Search, Edit2, Trash2, Activity, Clock, CheckCircle,
   X, FileCode, BookOpen, AlertTriangle, Save, Layers, Cpu, Target, Brain,
   Command, ChevronRight, Zap, BarChart3, Code, Terminal, Box, Play, Pause,
-  MoreVertical, Filter, Download, Upload
+  MoreVertical, Filter, Download, Upload, Shield, Feather
 } from 'lucide-react';
+import {
+  constraintLibrary,
+  categoryColors as constraintCategoryColors,
+  categoryLabels as constraintCategoryLabels,
+  typeLabels as constraintTypeLabels,
+  Constraint
+} from '../../shared/constraintLibrary';
 
 // 技能配置类型 - 符合行业标准
 interface Skill {
@@ -53,6 +60,11 @@ interface Skill {
     installed_at?: string;
     installed_version?: string;
     path?: string;
+  };
+  // 约束规则配置
+  constraints?: {
+    hard_constraints: string[];  // 硬约束ID列表
+    soft_constraints: string[];  // 软约束ID列表
   };
 }
 
@@ -262,7 +274,11 @@ const emptySkill: Skill = {
   triggers: { description: '', examples: [], keywords: [] },
   gotchas: [],
   files: {},
-  installation: { installed: false }
+  installation: { installed: false },
+  constraints: {
+    hard_constraints: [],
+    soft_constraints: []
+  }
 };
 
 export default function SkillConfiguration() {
@@ -273,7 +289,7 @@ export default function SkillConfiguration() {
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Skill>(emptySkill);
-  const [activeTab, setActiveTab] = useState<'basic' | 'dependencies' | 'schema' | 'triggers'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'dependencies' | 'constraints' | 'schema' | 'triggers'>('basic');
 
   // Filter skills by category and search
   const filteredSkills = useMemo(() => {
@@ -359,21 +375,21 @@ export default function SkillConfiguration() {
   return (
     <div className="h-full flex flex-col text-sm">
       {/* Header Toolbar - Palantir Style */}
-      <div className="h-9 px-3 border-b border-[#334155] flex items-center justify-between bg-[#334155] shrink-0">
+      <div className="h-9 px-3 border-b border-[#e2e8f0] flex items-center justify-between bg-white shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Command size={12} className="text-[#94a3b8]" />
+            <Command size={12} className="text-[#64748b]" />
             <span className="text-[10px] text-[#64748b]">技能中心</span>
           </div>
           <div className="h-4 w-px bg-[#475569]" />
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCommandPalette(true)}
-              className="flex items-center gap-2 px-2 py-1 bg-[#1e293b] rounded-sm border border-[#3d5166] hover:border-[#5a6f85] transition-colors"
+              className="flex items-center gap-2 px-2 py-1 bg-[#f8fafc] rounded-sm border border-[#e2e8f0] hover:border-[#5a6f85] transition-colors"
             >
-              <Search size={12} className="text-[#94a3b8]" />
-              <span className="text-xs text-[#94a3b8]">搜索技能...</span>
-              <span className="text-[10px] text-[#64748b] px-1 border border-[#334155] rounded">⌘K</span>
+              <Search size={12} className="text-[#64748b]" />
+              <span className="text-xs text-[#64748b]">搜索技能...</span>
+              <span className="text-[10px] text-[#64748b] px-1 border border-[#e2e8f0] rounded">⌘K</span>
             </button>
           </div>
         </div>
@@ -389,25 +405,25 @@ export default function SkillConfiguration() {
       </div>
 
       {/* Stats Bar - Configuration Metrics Only */}
-      <div className="h-8 px-3 border-b border-[#334155] flex items-center gap-6 bg-[#1e293b] text-[10px] text-[#94a3b8] shrink-0">
+      <div className="h-8 px-3 border-b border-[#e2e8f0] flex items-center gap-6 bg-[#f8fafc] text-[10px] text-[#64748b] shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-[#f1f5f9] font-mono text-xs">{skills.length}</span>
+          <span className="text-[#1e293b] font-mono text-xs">{skills.length}</span>
           <span>技能总数</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-          <span className="text-[#f1f5f9] font-mono text-xs">{stats.active}</span>
+          <span className="text-[#1e293b] font-mono text-xs">{stats.active}</span>
           <span>运行中</span>
         </div>
         <div className="flex items-center gap-2">
           <CheckCircle size={10} className="text-[#3b82f6]" />
-          <span className="text-[#f1f5f9] font-mono text-xs">{stats.installed}</span>
+          <span className="text-[#1e293b] font-mono text-xs">{stats.installed}</span>
           <span>已安装</span>
         </div>
         {stats.deprecated > 0 && (
           <div className="flex items-center gap-2">
             <AlertTriangle size={10} className="text-[#f59e0b]" />
-            <span className="text-[#f1f5f9] font-mono text-xs">{stats.deprecated}</span>
+            <span className="text-[#1e293b] font-mono text-xs">{stats.deprecated}</span>
             <span className="text-[#f59e0b]">已弃用</span>
           </div>
         )}
@@ -416,10 +432,10 @@ export default function SkillConfiguration() {
       {/* Main Content - 3 Panel Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Category Navigation */}
-        <div className="w-44 bg-[#334155] border-r border-[#3d5166] flex flex-col shrink-0">
-          <div className="h-7 px-3 border-b border-[#3d5166] flex items-center bg-[#334155]">
-            <Filter size={10} className="text-[#94a3b8] mr-2" />
-            <span className="text-[10px] font-semibold text-[#cbd5e1] uppercase tracking-wider">类别</span>
+        <div className="w-44 bg-white border-r border-[#e2e8f0] flex flex-col shrink-0">
+          <div className="h-7 px-3 border-b border-[#e2e8f0] flex items-center bg-white">
+            <Filter size={10} className="text-[#64748b] mr-2" />
+            <span className="text-[10px] font-semibold text-[#475569] uppercase tracking-wider">类别</span>
           </div>
           <div className="flex-1 overflow-auto py-1">
             <button
@@ -427,11 +443,11 @@ export default function SkillConfiguration() {
               className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors ${
                 selectedCategory === 'all'
                   ? 'bg-[#8b5cf6]/20 text-[#8b5cf6] border-l-2 border-[#8b5cf6]'
-                  : 'text-[#cbd5e1] hover:bg-[#475569] border-l-2 border-transparent'
+                  : 'text-[#475569] hover:bg-[#f1f5f9] border-l-2 border-transparent'
               }`}
             >
               <span>全部技能</span>
-              <span className="font-mono text-[10px] bg-[#1e293b] px-1.5 py-0.5 rounded">{categoryCounts.all}</span>
+              <span className="font-mono text-[10px] bg-[#f8fafc] px-1.5 py-0.5 rounded">{categoryCounts.all}</span>
             </button>
             {Object.entries(categoryLabels).map(([key, label]) => (
               <button
@@ -440,23 +456,23 @@ export default function SkillConfiguration() {
                 className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors ${
                   selectedCategory === key
                     ? 'bg-[#8b5cf6]/20 text-[#8b5cf6] border-l-2 border-[#8b5cf6]'
-                    : 'text-[#cbd5e1] hover:bg-[#475569] border-l-2 border-transparent'
+                    : 'text-[#475569] hover:bg-[#f1f5f9] border-l-2 border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-[#94a3b8]">{categoryIcons[key]}</span>
+                  <span className="text-[#64748b]">{categoryIcons[key]}</span>
                   <span>{label}</span>
                 </div>
-                <span className="font-mono text-[10px] bg-[#1e293b] px-1.5 py-0.5 rounded">{categoryCounts[key] || 0}</span>
+                <span className="font-mono text-[10px] bg-[#f8fafc] px-1.5 py-0.5 rounded">{categoryCounts[key] || 0}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Center Panel - Skill List */}
-        <div className="flex-1 flex flex-col bg-[#1e293b] min-w-0">
+        <div className="flex-1 flex flex-col bg-[#f8fafc] min-w-0">
           {/* List Header */}
-          <div className="h-8 px-3 border-b border-[#334155] flex items-center bg-[#253449] text-[10px] text-[#94a3b8] shrink-0">
+          <div className="h-8 px-3 border-b border-[#e2e8f0] flex items-center bg-white text-[10px] text-[#64748b] shrink-0">
             <div className="flex-1">技能ID / 名称</div>
             <div className="w-20 text-center">状态</div>
             <div className="w-24 text-center">依赖</div>
@@ -469,22 +485,22 @@ export default function SkillConfiguration() {
               <div
                 key={skill.skill_id}
                 onClick={() => handleSelectSkill(skill)}
-                className={`px-3 py-2 border-b border-[#334155] flex items-center cursor-pointer transition-colors group ${
+                className={`px-3 py-2 border-b border-[#e2e8f0] flex items-center cursor-pointer transition-colors group ${
                   selectedSkill?.skill_id === skill.skill_id
                     ? 'bg-[#8b5cf6]/10 border-l-2 border-l-[#8b5cf6]'
-                    : 'hover:bg-[#253449] border-l-2 border-l-transparent'
+                    : 'hover:bg-white border-l-2 border-l-transparent'
                 }`}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <code className="text-[10px] text-[#8b5cf6] font-mono">{skill.skill_id}</code>
-                    <span className="text-xs text-[#f1f5f9] truncate">{skill.name}</span>
+                    <span className="text-xs text-[#1e293b] truncate">{skill.name}</span>
                     {skill.deprecated && (
                       <span className="px-1 py-0.5 bg-[#f59e0b]/20 text-[#f59e0b] text-[9px] rounded">已弃用</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] text-[#94a3b8]">{categoryLabels[skill.category]}</span>
+                    <span className="text-[10px] text-[#64748b]">{categoryLabels[skill.category]}</span>
                     <span className="text-[10px] text-[#64748b]">v{skill.version}</span>
                     {skill.installation.installed && (
                       <CheckCircle size={10} className="text-[#10b981]" />
@@ -506,7 +522,7 @@ export default function SkillConfiguration() {
                 </div>
                 <div className="w-24 text-center">
                   {skill.dependencies.length > 0 ? (
-                    <span className="text-[10px] text-[#94a3b8] font-mono">{skill.dependencies.length} 个</span>
+                    <span className="text-[10px] text-[#64748b] font-mono">{skill.dependencies.length} 个</span>
                   ) : (
                     <span className="text-[10px] text-[#64748b]">-</span>
                   )}
@@ -525,14 +541,14 @@ export default function SkillConfiguration() {
         </div>
 
         {/* Right Panel - Properties/Editor */}
-        <div className="w-96 bg-[#334155] border-l border-[#3d5166] flex flex-col shrink-0">
+        <div className="w-96 bg-white border-l border-[#e2e8f0] flex flex-col shrink-0">
           {selectedSkill || isEditing ? (
             <>
               {/* Panel Header */}
-              <div className="h-10 px-3 border-b border-[#3d5166] flex items-center justify-between bg-[#334155] shrink-0">
+              <div className="h-10 px-3 border-b border-[#e2e8f0] flex items-center justify-between bg-white shrink-0">
                 <div className="flex items-center gap-2">
                   <Sparkles size={14} className="text-[#8b5cf6]" />
-                  <span className="text-xs font-medium text-[#f1f5f9]">
+                  <span className="text-xs font-medium text-[#1e293b]">
                     {isEditing ? (selectedSkill ? '编辑技能' : '新建技能') : '技能详情'}
                   </span>
                 </div>
@@ -540,9 +556,9 @@ export default function SkillConfiguration() {
                   {!isEditing && (
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="p-1.5 hover:bg-[#475569] rounded-sm"
+                      className="p-1.5 hover:bg-[#f1f5f9] rounded-sm"
                     >
-                      <Edit2 size={14} className="text-[#94a3b8]" />
+                      <Edit2 size={14} className="text-[#64748b]" />
                     </button>
                   )}
                 </div>
@@ -552,19 +568,20 @@ export default function SkillConfiguration() {
                 // Edit Mode
                 <>
                   {/* Tabs */}
-                  <div className="px-3 border-b border-[#3d5166] bg-[#334155] flex items-center gap-1 shrink-0">
-                    {(['basic', 'dependencies', 'schema', 'triggers'] as const).map((tab) => (
+                  <div className="px-3 border-b border-[#e2e8f0] bg-white flex items-center gap-1 shrink-0">
+                    {(['basic', 'dependencies', 'constraints', 'schema', 'triggers'] as const).map((tab) => (
                       <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         className={`px-3 py-2 text-[10px] border-b-2 transition-colors ${
                           activeTab === tab
                             ? 'text-[#8b5cf6] border-[#8b5cf6]'
-                            : 'text-[#94a3b8] border-transparent hover:text-[#cbd5e1]'
+                            : 'text-[#64748b] border-transparent hover:text-[#475569]'
                         }`}
                       >
                         {tab === 'basic' && '基本信息'}
                         {tab === 'dependencies' && '依赖'}
+                        {tab === 'constraints' && '约束'}
                         {tab === 'schema' && 'Schema'}
                         {tab === 'triggers' && '触发'}
                       </button>
@@ -576,40 +593,40 @@ export default function SkillConfiguration() {
                     {activeTab === 'basic' && (
                       <div className="space-y-3">
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">技能ID</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">技能ID</label>
                           <input
                             type="text"
                             value={formData.skill_id}
                             onChange={(e) => setFormData({ ...formData, skill_id: e.target.value })}
                             disabled={!!selectedSkill}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#8b5cf6] outline-none disabled:opacity-50 font-mono"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#8b5cf6] outline-none disabled:opacity-50 font-mono"
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">名称</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">名称</label>
                           <input
                             type="text"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#8b5cf6] outline-none"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#8b5cf6] outline-none"
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">版本</label>
+                            <label className="text-[10px] text-[#64748b] uppercase block mb-1">版本</label>
                             <input
                               type="text"
                               value={formData.version}
                               onChange={(e) => setFormData({ ...formData, version: e.target.value })}
-                              className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#8b5cf6] outline-none"
+                              className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#8b5cf6] outline-none"
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">类别</label>
+                            <label className="text-[10px] text-[#64748b] uppercase block mb-1">类别</label>
                             <select
                               value={formData.category}
                               onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                              className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#8b5cf6] outline-none"
+                              className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#8b5cf6] outline-none"
                             >
                               {Object.entries(categoryLabels).map(([key, label]) => (
                                 <option key={key} value={key}>{label}</option>
@@ -618,21 +635,21 @@ export default function SkillConfiguration() {
                           </div>
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">描述</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">描述</label>
                           <textarea
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             rows={3}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#8b5cf6] outline-none resize-none"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#8b5cf6] outline-none resize-none"
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">作者</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">作者</label>
                           <input
                             type="text"
                             value={formData.author}
                             onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#8b5cf6] outline-none"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#8b5cf6] outline-none"
                           />
                         </div>
                       </div>
@@ -641,7 +658,7 @@ export default function SkillConfiguration() {
                     {activeTab === 'dependencies' && (
                       <div className="space-y-3">
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">
                             依赖项 (逗号分隔)
                           </label>
                           <input
@@ -651,7 +668,7 @@ export default function SkillConfiguration() {
                               ...formData,
                               dependencies: e.target.value.split(',').map(k => k.trim()).filter(Boolean)
                             })}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#8b5cf6] outline-none"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#8b5cf6] outline-none"
                             placeholder="skill_id1, skill_id2, package_name"
                           />
                           <p className="text-[10px] text-[#64748b] mt-1">
@@ -664,20 +681,20 @@ export default function SkillConfiguration() {
                             id="deprecated"
                             checked={formData.deprecated || false}
                             onChange={(e) => setFormData({ ...formData, deprecated: e.target.checked })}
-                            className="rounded border-[#475569] bg-[#1e293b]"
+                            className="rounded border-[#cbd5e1] bg-[#f8fafc]"
                           />
-                          <label htmlFor="deprecated" className="text-xs text-[#f1f5f9]">标记为已弃用</label>
+                          <label htmlFor="deprecated" className="text-xs text-[#1e293b]">标记为已弃用</label>
                         </div>
                         {formData.deprecated && (
                           <div>
-                            <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">
+                            <label className="text-[10px] text-[#64748b] uppercase block mb-1">
                               弃用原因 / 替代方案
                             </label>
                             <input
                               type="text"
                               value={formData.deprecated_reason || ''}
                               onChange={(e) => setFormData({ ...formData, deprecated_reason: e.target.value })}
-                              className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#8b5cf6] outline-none"
+                              className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#8b5cf6] outline-none"
                               placeholder="请说明弃用原因和推荐的替代技能"
                             />
                           </div>
@@ -688,48 +705,221 @@ export default function SkillConfiguration() {
                     {activeTab === 'schema' && (
                       <div className="space-y-3">
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">输入 Schema</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">输入 Schema</label>
                           <textarea
                             value={JSON.stringify(formData.input_schema, null, 2)}
                             onChange={(e) => {
                               try { setFormData({ ...formData, input_schema: JSON.parse(e.target.value) }); } catch {}
                             }}
                             rows={10}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#8b5cf6] outline-none resize-none font-mono"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#8b5cf6] outline-none resize-none font-mono"
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">输出 Schema</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">输出 Schema</label>
                           <textarea
                             value={JSON.stringify(formData.output_schema, null, 2)}
                             onChange={(e) => {
                               try { setFormData({ ...formData, output_schema: JSON.parse(e.target.value) }); } catch {}
                             }}
                             rows={10}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#8b5cf6] outline-none resize-none font-mono"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#8b5cf6] outline-none resize-none font-mono"
                           />
                         </div>
+                      </div>
+                    )}
+
+                    {activeTab === 'constraints' && (
+                      <div className="space-y-4">
+                        {/* 硬约束选择区 */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Shield size={12} className="text-[#ef4444]" />
+                            <label className="text-[10px] text-[#64748b] uppercase">硬约束</label>
+                            <span className="text-[10px] text-[#64748b] bg-[#f8fafc] px-1.5 py-0.5 rounded">
+                              {(formData.constraints?.hard_constraints || []).length} 已选择
+                            </span>
+                          </div>
+                          <div className="space-y-1 max-h-32 overflow-auto border border-[#e2e8f0] rounded-sm p-2">
+                            {constraintLibrary.filter(c => c.type === 'hard').map(constraint => {
+                              const isSelected = (formData.constraints?.hard_constraints || []).includes(constraint.constraint_id);
+                              return (
+                                <label
+                                  key={constraint.constraint_id}
+                                  className={`flex items-start gap-2 p-2 rounded-sm cursor-pointer transition-colors ${
+                                    isSelected ? 'bg-[#ef4444]/10 border border-[#ef4444]/30' : 'hover:bg-[#f8fafc]'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                      const hardConstraints = e.target.checked
+                                        ? [...(formData.constraints?.hard_constraints || []), constraint.constraint_id]
+                                        : (formData.constraints?.hard_constraints || []).filter(id => id !== constraint.constraint_id);
+                                      setFormData({
+                                        ...formData,
+                                        constraints: {
+                                          ...(formData.constraints || { hard_constraints: [], soft_constraints: [] }),
+                                          hard_constraints: hardConstraints
+                                        }
+                                      });
+                                    }}
+                                    className="mt-0.5 rounded"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs text-[#1e293b] font-medium">{constraint.name}</span>
+                                      <span
+                                        className="text-[9px] px-1 py-0.5 rounded"
+                                        style={{ backgroundColor: `${constraintCategoryColors[constraint.category]}20`, color: constraintCategoryColors[constraint.category] }}
+                                      >
+                                        {constraintCategoryLabels[constraint.category]}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-[#64748b] mt-0.5 line-clamp-1">{constraint.description}</div>
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* 软约束选择区 */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Feather size={12} className="text-[#3b82f6]" />
+                            <label className="text-[10px] text-[#64748b] uppercase">软约束</label>
+                            <span className="text-[10px] text-[#64748b] bg-[#f8fafc] px-1.5 py-0.5 rounded">
+                              {(formData.constraints?.soft_constraints || []).length} 已选择
+                            </span>
+                          </div>
+                          <div className="space-y-1 max-h-32 overflow-auto border border-[#e2e8f0] rounded-sm p-2">
+                            {constraintLibrary.filter(c => c.type === 'soft').map(constraint => {
+                              const isSelected = (formData.constraints?.soft_constraints || []).includes(constraint.constraint_id);
+                              return (
+                                <label
+                                  key={constraint.constraint_id}
+                                  className={`flex items-start gap-2 p-2 rounded-sm cursor-pointer transition-colors ${
+                                    isSelected ? 'bg-[#3b82f6]/10 border border-[#3b82f6]/30' : 'hover:bg-[#f8fafc]'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                      const softConstraints = e.target.checked
+                                        ? [...(formData.constraints?.soft_constraints || []), constraint.constraint_id]
+                                        : (formData.constraints?.soft_constraints || []).filter(id => id !== constraint.constraint_id);
+                                      setFormData({
+                                        ...formData,
+                                        constraints: {
+                                          ...(formData.constraints || { hard_constraints: [], soft_constraints: [] }),
+                                          soft_constraints: softConstraints
+                                        }
+                                      });
+                                    }}
+                                    className="mt-0.5 rounded"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs text-[#1e293b] font-medium">{constraint.name}</span>
+                                      <span
+                                        className="text-[9px] px-1 py-0.5 rounded"
+                                        style={{ backgroundColor: `${constraintCategoryColors[constraint.category]}20`, color: constraintCategoryColors[constraint.category] }}
+                                      >
+                                        {constraintCategoryLabels[constraint.category]}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-[#64748b] mt-0.5 line-clamp-1">{constraint.description}</div>
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* 已选约束标签展示 */}
+                        {(formData.constraints?.hard_constraints?.length || 0) + (formData.constraints?.soft_constraints?.length || 0) > 0 && (
+                          <div className="pt-2 border-t border-[#e2e8f0]">
+                            <div className="text-[10px] text-[#64748b] uppercase mb-2">已选约束</div>
+                            <div className="flex flex-wrap gap-1">
+                              {(formData.constraints?.hard_constraints || []).map(constraintId => {
+                                const constraint = constraintLibrary.find(c => c.constraint_id === constraintId);
+                                return constraint ? (
+                                  <span
+                                    key={constraintId}
+                                    className="text-[10px] px-2 py-0.5 bg-[#ef4444]/10 text-[#ef4444] rounded-sm flex items-center gap-1"
+                                  >
+                                    <Shield size={8} />
+                                    {constraint.name}
+                                    <button
+                                      onClick={() => {
+                                        setFormData({
+                                          ...formData,
+                                          constraints: {
+                                            ...(formData.constraints || { hard_constraints: [], soft_constraints: [] }),
+                                            hard_constraints: (formData.constraints?.hard_constraints || []).filter(id => id !== constraintId)
+                                          }
+                                        });
+                                      }}
+                                      className="hover:text-[#ef4444]/70"
+                                    >
+                                      <X size={8} />
+                                    </button>
+                                  </span>
+                                ) : null;
+                              })}
+                              {(formData.constraints?.soft_constraints || []).map(constraintId => {
+                                const constraint = constraintLibrary.find(c => c.constraint_id === constraintId);
+                                return constraint ? (
+                                  <span
+                                    key={constraintId}
+                                    className="text-[10px] px-2 py-0.5 bg-[#3b82f6]/10 text-[#3b82f6] rounded-sm flex items-center gap-1"
+                                  >
+                                    <Feather size={8} />
+                                    {constraint.name}
+                                    <button
+                                      onClick={() => {
+                                        setFormData({
+                                          ...formData,
+                                          constraints: {
+                                            ...(formData.constraints || { hard_constraints: [], soft_constraints: [] }),
+                                            soft_constraints: (formData.constraints?.soft_constraints || []).filter(id => id !== constraintId)
+                                          }
+                                        });
+                                      }}
+                                      className="hover:text-[#3b82f6]/70"
+                                    >
+                                      <X size={8} />
+                                    </button>
+                                  </span>
+                                ) : null;
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
                     {activeTab === 'triggers' && (
                       <div className="space-y-3">
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">触发描述</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">触发描述</label>
                           <textarea
                             value={formData.triggers.description}
                             onChange={(e) => setFormData({ ...formData, triggers: { ...formData.triggers, description: e.target.value } })}
                             rows={2}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#8b5cf6] outline-none resize-none"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#8b5cf6] outline-none resize-none"
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">关键词 (逗号分隔)</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">关键词 (逗号分隔)</label>
                           <input
                             type="text"
                             value={formData.triggers.keywords.join(', ')}
                             onChange={(e) => setFormData({ ...formData, triggers: { ...formData.triggers, keywords: e.target.value.split(',').map(k => k.trim()).filter(Boolean) } })}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#8b5cf6] outline-none"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#8b5cf6] outline-none"
                           />
                         </div>
                       </div>
@@ -737,10 +927,10 @@ export default function SkillConfiguration() {
                   </div>
 
                   {/* Edit Actions */}
-                  <div className="p-3 border-t border-[#3d5166] flex items-center justify-end gap-2 shrink-0">
+                  <div className="p-3 border-t border-[#e2e8f0] flex items-center justify-end gap-2 shrink-0">
                     <button
                       onClick={() => { setIsEditing(false); if (selectedSkill) setFormData(selectedSkill); }}
-                      className="px-3 py-1.5 text-xs text-[#94a3b8] hover:text-[#f1f5f9] transition-colors"
+                      className="px-3 py-1.5 text-xs text-[#64748b] hover:text-[#1e293b] transition-colors"
                     >
                       取消
                     </button>
@@ -757,7 +947,7 @@ export default function SkillConfiguration() {
                 // View Mode - Configuration Details
                 <div className="flex-1 overflow-auto">
                   {/* Status Badge */}
-                  <div className="p-3 border-b border-[#3d5166]">
+                  <div className="p-3 border-b border-[#e2e8f0]">
                     <div className="flex items-center justify-between">
                       <code className="text-xs text-[#8b5cf6] font-mono">{selectedSkill?.skill_id}</code>
                       <div className="flex items-center gap-2">
@@ -777,20 +967,20 @@ export default function SkillConfiguration() {
                         </span>
                       </div>
                     </div>
-                    <h3 className="text-sm font-medium text-[#f1f5f9] mt-2">{selectedSkill?.name}</h3>
-                    <p className="text-xs text-[#94a3b8] mt-1">{selectedSkill?.description}</p>
+                    <h3 className="text-sm font-medium text-[#1e293b] mt-2">{selectedSkill?.name}</h3>
+                    <p className="text-xs text-[#64748b] mt-1">{selectedSkill?.description}</p>
                     {selectedSkill?.deprecated_reason && (
                       <p className="text-[10px] text-[#f59e0b] mt-1">{selectedSkill.deprecated_reason}</p>
                     )}
                   </div>
 
                   {/* Dependencies */}
-                  <div className="p-3 border-b border-[#3d5166]">
-                    <div className="text-[10px] text-[#94a3b8] uppercase mb-2">依赖项</div>
+                  <div className="p-3 border-b border-[#e2e8f0]">
+                    <div className="text-[10px] text-[#64748b] uppercase mb-2">依赖项</div>
                     {selectedSkill?.dependencies.length ? (
                       <div className="flex flex-wrap gap-1">
                         {selectedSkill.dependencies.map((dep, idx) => (
-                          <span key={idx} className="px-2 py-0.5 bg-[#1e293b] text-[#94a3b8] text-[10px] rounded font-mono">
+                          <span key={idx} className="px-2 py-0.5 bg-[#f8fafc] text-[#64748b] text-[10px] rounded font-mono">
                             {dep}
                           </span>
                         ))}
@@ -800,14 +990,67 @@ export default function SkillConfiguration() {
                     )}
                   </div>
 
+                  {/* Constraints */}
+                  {(selectedSkill?.constraints?.hard_constraints?.length || 0) + (selectedSkill?.constraints?.soft_constraints?.length || 0) > 0 && (
+                    <div className="p-3 border-b border-[#e2e8f0]">
+                      <div className="text-[10px] text-[#64748b] uppercase mb-2">约束规则</div>
+                      <div className="space-y-2">
+                        {selectedSkill?.constraints?.hard_constraints && selectedSkill.constraints.hard_constraints.length > 0 && (
+                          <div>
+                            <div className="text-[10px] text-[#ef4444] mb-1 flex items-center gap-1">
+                              <Shield size={10} />
+                              硬约束
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {selectedSkill.constraints.hard_constraints.map((constraintId, idx) => {
+                                const constraint = constraintLibrary.find(c => c.constraint_id === constraintId);
+                                return constraint ? (
+                                  <span key={idx} className="px-2 py-0.5 bg-[#ef4444]/10 text-[#ef4444] text-[10px] rounded font-medium">
+                                    {constraint.name}
+                                  </span>
+                                ) : (
+                                  <span key={idx} className="px-2 py-0.5 bg-[#f8fafc] text-[#64748b] text-[10px] rounded font-mono">
+                                    {constraintId}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {selectedSkill?.constraints?.soft_constraints && selectedSkill.constraints.soft_constraints.length > 0 && (
+                          <div>
+                            <div className="text-[10px] text-[#3b82f6] mb-1 flex items-center gap-1">
+                              <Feather size={10} />
+                              软约束
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {selectedSkill.constraints.soft_constraints.map((constraintId, idx) => {
+                                const constraint = constraintLibrary.find(c => c.constraint_id === constraintId);
+                                return constraint ? (
+                                  <span key={idx} className="px-2 py-0.5 bg-[#3b82f6]/10 text-[#3b82f6] text-[10px] rounded font-medium">
+                                    {constraint.name}
+                                  </span>
+                                ) : (
+                                  <span key={idx} className="px-2 py-0.5 bg-[#f8fafc] text-[#64748b] text-[10px] rounded font-mono">
+                                    {constraintId}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Examples */}
                   {selectedSkill?.examples && selectedSkill.examples.length > 0 && (
-                    <div className="p-3 border-b border-[#3d5166]">
-                      <div className="text-[10px] text-[#94a3b8] uppercase mb-2">示例</div>
+                    <div className="p-3 border-b border-[#e2e8f0]">
+                      <div className="text-[10px] text-[#64748b] uppercase mb-2">示例</div>
                       <div className="space-y-2">
                         {selectedSkill.examples.map((example, idx) => (
-                          <div key={idx} className="bg-[#1e293b] rounded-sm p-2">
-                            <div className="text-xs text-[#f1f5f9] font-medium">{example.name}</div>
+                          <div key={idx} className="bg-[#f8fafc] rounded-sm p-2">
+                            <div className="text-xs text-[#1e293b] font-medium">{example.name}</div>
                             {example.description && (
                               <p className="text-[10px] text-[#64748b] mt-0.5">{example.description}</p>
                             )}
@@ -824,9 +1067,9 @@ export default function SkillConfiguration() {
                   )}
 
                   {/* Triggers */}
-                  <div className="p-3 border-b border-[#3d5166]">
-                    <div className="text-[10px] text-[#94a3b8] uppercase mb-2">触发条件</div>
-                    <p className="text-xs text-[#cbd5e1]">{selectedSkill?.triggers.description}</p>
+                  <div className="p-3 border-b border-[#e2e8f0]">
+                    <div className="text-[10px] text-[#64748b] uppercase mb-2">触发条件</div>
+                    <p className="text-xs text-[#475569]">{selectedSkill?.triggers.description}</p>
                     {(selectedSkill?.triggers.keywords?.length || 0) > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {selectedSkill!.triggers.keywords.map((kw, idx) => (
@@ -840,14 +1083,14 @@ export default function SkillConfiguration() {
 
                   {/* Gotchas */}
                   {selectedSkill?.gotchas && selectedSkill.gotchas.length > 0 && (
-                    <div className="p-3 border-b border-[#3d5166]">
-                      <div className="text-[10px] text-[#94a3b8] uppercase mb-2">注意事项</div>
+                    <div className="p-3 border-b border-[#e2e8f0]">
+                      <div className="text-[10px] text-[#64748b] uppercase mb-2">注意事项</div>
                       <div className="space-y-2">
                         {selectedSkill.gotchas.map((gotcha) => (
-                          <div key={gotcha.id} className="bg-[#1e293b] rounded-sm p-2 border-l-2 border-[#f59e0b]">
+                          <div key={gotcha.id} className="bg-[#f8fafc] rounded-sm p-2 border-l-2 border-[#f59e0b]">
                             <div className="flex items-center gap-1.5">
                               <AlertTriangle size={10} className="text-[#f59e0b]" />
-                              <span className="text-xs text-[#f1f5f9]">{gotcha.title}</span>
+                              <span className="text-xs text-[#1e293b]">{gotcha.title}</span>
                               <span className={`text-[9px] px-1 rounded ${
                                 gotcha.severity === 'critical' ? 'bg-[#ef4444]/20 text-[#ef4444]' :
                                 gotcha.severity === 'high' ? 'bg-[#f59e0b]/20 text-[#f59e0b]' :
@@ -855,7 +1098,7 @@ export default function SkillConfiguration() {
                                 'bg-[#64748b]/20 text-[#64748b]'
                               }`}>{gotcha.severity}</span>
                             </div>
-                            <p className="text-[10px] text-[#94a3b8] mt-1">{gotcha.description}</p>
+                            <p className="text-[10px] text-[#64748b] mt-1">{gotcha.description}</p>
                             <p className="text-[10px] text-[#10b981] mt-0.5">解决: {gotcha.solution}</p>
                           </div>
                         ))}
@@ -865,29 +1108,29 @@ export default function SkillConfiguration() {
 
                   {/* Installation */}
                   <div className="p-3">
-                    <div className="text-[10px] text-[#94a3b8] uppercase mb-2">安装信息</div>
+                    <div className="text-[10px] text-[#64748b] uppercase mb-2">安装信息</div>
                     <div className="space-y-1.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-[#94a3b8]">状态</span>
+                        <span className="text-[#64748b]">状态</span>
                         <span className={selectedSkill?.installation.installed ? 'text-[#10b981]' : 'text-[#64748b]'}>
                           {selectedSkill?.installation.installed ? '已安装' : '未安装'}
                         </span>
                       </div>
                       {selectedSkill?.installation.installed_version && (
                         <div className="flex items-center justify-between">
-                          <span className="text-[#94a3b8]">安装版本</span>
-                          <span className="text-[#f1f5f9] font-mono">{selectedSkill.installation.installed_version}</span>
+                          <span className="text-[#64748b]">安装版本</span>
+                          <span className="text-[#1e293b] font-mono">{selectedSkill.installation.installed_version}</span>
                         </div>
                       )}
                       {selectedSkill?.installation.path && (
                         <div className="flex items-center justify-between">
-                          <span className="text-[#94a3b8]">路径</span>
-                          <span className="text-[#f1f5f9] font-mono text-[10px]">{selectedSkill.installation.path}</span>
+                          <span className="text-[#64748b]">路径</span>
+                          <span className="text-[#1e293b] font-mono text-[10px]">{selectedSkill.installation.path}</span>
                         </div>
                       )}
                       <div className="flex items-center justify-between">
-                        <span className="text-[#94a3b8]">更新于</span>
-                        <span className="text-[#f1f5f9] text-[10px]">{selectedSkill?.updated_at && new Date(selectedSkill.updated_at).toLocaleString()}</span>
+                        <span className="text-[#64748b]">更新于</span>
+                        <span className="text-[#1e293b] text-[10px]">{selectedSkill?.updated_at && new Date(selectedSkill.updated_at).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -908,20 +1151,20 @@ export default function SkillConfiguration() {
       {/* Command Palette */}
       {showCommandPalette && (
         <div className="fixed inset-0 bg-black/70 flex items-start justify-center pt-32 z-50">
-          <div className="bg-[#1e293b] border border-[#3d5166] rounded-sm w-full max-w-lg shadow-2xl">
-            <div className="p-3 border-b border-[#334155] flex items-center gap-2">
-              <Search size={16} className="text-[#94a3b8]" />
+          <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-sm w-full max-w-lg shadow-2xl">
+            <div className="p-3 border-b border-[#e2e8f0] flex items-center gap-2">
+              <Search size={16} className="text-[#64748b]" />
               <input
                 type="text"
                 autoFocus
                 placeholder="搜索技能..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 bg-transparent border-none outline-none text-sm text-[#f1f5f9] placeholder:text-[#64748b]"
+                className="flex-1 bg-transparent border-none outline-none text-sm text-[#1e293b] placeholder:text-[#64748b]"
               />
               <button
                 onClick={() => setShowCommandPalette(false)}
-                className="text-[10px] text-[#64748b] px-1.5 py-0.5 border border-[#334155] rounded"
+                className="text-[10px] text-[#64748b] px-1.5 py-0.5 border border-[#e2e8f0] rounded"
               >
                 ESC
               </button>
@@ -931,12 +1174,12 @@ export default function SkillConfiguration() {
                 <button
                   key={skill.skill_id}
                   onClick={() => { handleSelectSkill(skill); setShowCommandPalette(false); setSearchTerm(''); }}
-                  className="w-full px-3 py-2 flex items-center gap-3 hover:bg-[#334155] transition-colors text-left"
+                  className="w-full px-3 py-2 flex items-center gap-3 hover:bg-white transition-colors text-left"
                 >
                   <Sparkles size={14} className="text-[#8b5cf6]" />
                   <div className="flex-1">
-                    <div className="text-sm text-[#f1f5f9]">{skill.name}</div>
-                    <div className="text-[10px] text-[#94a3b8] font-mono">{skill.skill_id}</div>
+                    <div className="text-sm text-[#1e293b]">{skill.name}</div>
+                    <div className="text-[10px] text-[#64748b] font-mono">{skill.skill_id}</div>
                   </div>
                   <span className="text-[10px] text-[#64748b]">{categoryLabels[skill.category]}</span>
                 </button>
@@ -947,10 +1190,10 @@ export default function SkillConfiguration() {
                 </div>
               )}
             </div>
-            <div className="px-3 py-2 border-t border-[#334155] flex items-center gap-4 text-[10px] text-[#64748b]">
-              <span className="flex items-center gap-1"><span className="px-1 border border-[#334155] rounded">↑↓</span> 选择</span>
-              <span className="flex items-center gap-1"><span className="px-1 border border-[#334155] rounded">↵</span> 打开</span>
-              <span className="flex items-center gap-1"><span className="px-1 border border-[#334155] rounded">esc</span> 关闭</span>
+            <div className="px-3 py-2 border-t border-[#e2e8f0] flex items-center gap-4 text-[10px] text-[#64748b]">
+              <span className="flex items-center gap-1"><span className="px-1 border border-[#e2e8f0] rounded">↑↓</span> 选择</span>
+              <span className="flex items-center gap-1"><span className="px-1 border border-[#e2e8f0] rounded">↵</span> 打开</span>
+              <span className="flex items-center gap-1"><span className="px-1 border border-[#e2e8f0] rounded">esc</span> 关闭</span>
             </div>
           </div>
         </div>

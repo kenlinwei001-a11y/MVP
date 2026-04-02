@@ -160,7 +160,7 @@ export default function IndustrialLayout() {
               <div className="grid grid-cols-4 gap-2 mb-3">
                 {[
                   { label: '订单号', value: 'SO-2024-001', color: 'text-[#e2e8f0]' },
-                  { label: '客户', value: '宁德时代', color: 'text-[#3b82f6]' },
+                  { label: '产品型号', value: 'LFP-280Ah', color: 'text-[#3b82f6]' },
                   { label: '交期', value: '2024-04-15', color: 'text-[#10b981]' },
                   { label: '状态', value: '生产中', color: 'text-[#f59e0b]' },
                 ].map((item) => (

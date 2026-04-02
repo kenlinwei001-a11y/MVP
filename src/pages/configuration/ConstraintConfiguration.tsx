@@ -3,44 +3,24 @@ import {
   Plus, Search, Edit2, Trash2, Shield, AlertCircle, CheckCircle,
   X, ChevronDown, ChevronUp, HardDrive, Feather, Target, Layers,
   Clock, User, Hash, AlertTriangle, Terminal, Save, Code,
-  Command, Zap, BarChart3, Ban, Play, Pause, Filter, MoreVertical
+  Command, Zap, BarChart3, Ban, Play, Pause, Filter, MoreVertical,
+  FileCode, Settings, GitBranch
 } from 'lucide-react';
+import {
+  Constraint,
+  ConstraintNature,
+  DynamicConstraintConfig,
+  ConditionalRule,
+  categoryLabels,
+  categoryColors,
+  natureLabels,
+  natureColors,
+  constraintLibrary,
+  createEmptyConstraint
+} from '../../shared/constraintLibrary';
 
-// 约束规则类型定义 - 符合行业标准
-interface Constraint {
-  constraint_id: string;
-  name: string;
-  description: string;
-  category: 'time' | 'resource' | 'process' | 'cost' | 'quality' | 'safety';
-  type: 'hard' | 'soft';
-  expression: string;
-  operator: string;
-  target_field: string;
-  threshold?: number | string;
-  applies_to: string[];
-  scope: 'global' | 'workflow' | 'step' | 'entity';
-  priority: number;
-  created_at: string;
-  updated_at: string;
-  author: string;
-  version: string;
-  severity?: 'critical' | 'high' | 'medium' | 'low';
-  weight?: number;
-  conflict_resolution: string;
-  fallback_action?: string;
-  alert_level?: string;
-  enabled: boolean;
-  tags: string[];
-}
-
-const categoryLabels: Record<string, string> = {
-  time: '时间',
-  resource: '资源',
-  process: '工艺',
-  cost: '成本',
-  quality: '质量',
-  safety: '安全',
-};
+// 动态约束配置表单类型（允许部分字段）
+type DynamicConstraintConfigForm = Partial<DynamicConstraintConfig>;
 
 const categoryIcons: Record<string, React.ReactNode> = {
   time: <Clock size={12} />,
@@ -51,193 +31,18 @@ const categoryIcons: Record<string, React.ReactNode> = {
   safety: <Shield size={12} />,
 };
 
-const categoryColors: Record<string, string> = {
-  time: '#3b82f6',
-  resource: '#10b981',
-  process: '#f59e0b',
-  cost: '#8b5cf6',
-  quality: '#ec4899',
-  safety: '#ef4444',
-};
-
-const initialConstraints: Constraint[] = [
-  {
-    constraint_id: 'delivery_deadline',
-    name: '交期不可延迟',
-    description: '订单交付日期必须严格满足客户要求的截止日期',
-    category: 'time',
-    type: 'hard',
-    expression: 'delivery_date <= deadline',
-    operator: '<=',
-    target_field: 'delivery_date',
-    applies_to: ['SalesOrder', 'WorkOrder'],
-    scope: 'workflow',
-    priority: 10,
-    created_at: '2024-03-01T10:00:00Z',
-    updated_at: '2024-03-20T15:30:00Z',
-    author: '李明',
-    version: '2.1.0',
-    severity: 'critical',
-    conflict_resolution: 'priority',
-    fallback_action: 'block',
-    alert_level: 'critical',
-    enabled: true,
-    tags: ['delivery', 'time-critical']
-  },
-  {
-    constraint_id: 'minimize_setup',
-    name: '最小化换线次数',
-    description: '在满足交期的前提下，减少设备换线次数',
-    category: 'resource',
-    type: 'soft',
-    expression: 'minimize(setup_count)',
-    operator: 'minimize',
-    target_field: 'setup_count',
-    applies_to: ['ProductionLine', 'WorkCenter'],
-    scope: 'workflow',
-    priority: 5,
-    created_at: '2024-02-15T09:00:00Z',
-    updated_at: '2024-03-18T11:20:00Z',
-    author: '王芳',
-    version: '1.5.0',
-    weight: 0.7,
-    conflict_resolution: 'weighted',
-    fallback_action: 'alert',
-    alert_level: 'medium',
-    enabled: true,
-    tags: ['setup', 'optimization']
-  },
-  {
-    constraint_id: 'equipment_capacity',
-    name: '设备产能限制',
-    description: '设备每日运行时间不得超过其最大产能限制',
-    category: 'resource',
-    type: 'hard',
-    expression: 'daily_runtime <= max_capacity * 0.9',
-    operator: '<=',
-    target_field: 'daily_runtime',
-    threshold: 0.9,
-    applies_to: ['Equipment', 'ProductionLine'],
-    scope: 'entity',
-    priority: 9,
-    created_at: '2024-01-20T14:00:00Z',
-    updated_at: '2024-03-15T10:45:00Z',
-    author: '张伟',
-    version: '3.0.1',
-    severity: 'high',
-    conflict_resolution: 'abort',
-    fallback_action: 'block',
-    alert_level: 'high',
-    enabled: true,
-    tags: ['capacity', 'equipment']
-  },
-  {
-    constraint_id: 'quality_inspection',
-    name: '质检合格率',
-    description: '产品质检合格率必须达到98%以上',
-    category: 'quality',
-    type: 'hard',
-    expression: 'quality_rate >= 0.98',
-    operator: '>=',
-    target_field: 'quality_rate',
-    threshold: 0.98,
-    applies_to: ['WorkOrder', 'Product'],
-    scope: 'workflow',
-    priority: 8,
-    created_at: '2024-01-10T08:00:00Z',
-    updated_at: '2024-03-10T16:20:00Z',
-    author: '质量部',
-    version: '1.2.0',
-    severity: 'high',
-    conflict_resolution: 'abort',
-    fallback_action: 'block',
-    alert_level: 'high',
-    enabled: true,
-    tags: ['quality', 'inspection']
-  },
-  {
-    constraint_id: 'safety_stock',
-    name: '安全库存',
-    description: '原材料库存不得低于安全库存水平',
-    category: 'resource',
-    type: 'hard',
-    expression: 'stock_level >= safety_level',
-    operator: '>=',
-    target_field: 'stock_level',
-    applies_to: ['Material', 'Inventory'],
-    scope: 'entity',
-    priority: 7,
-    created_at: '2024-02-01T11:00:00Z',
-    updated_at: '2024-03-05T09:30:00Z',
-    author: '供应链',
-    version: '2.0.0',
-    severity: 'medium',
-    conflict_resolution: 'priority',
-    fallback_action: 'alert',
-    alert_level: 'medium',
-    enabled: false,
-    tags: ['inventory', 'stock']
-  },
-  {
-    constraint_id: 'safety_temperature',
-    name: '设备温度上限',
-    description: '设备运行温度不得超过安全阈值',
-    category: 'safety',
-    type: 'hard',
-    expression: 'temperature <= 85',
-    operator: '<=',
-    target_field: 'temperature',
-    threshold: 85,
-    applies_to: ['Equipment', 'WorkCenter'],
-    scope: 'entity',
-    priority: 10,
-    created_at: '2024-01-05T10:00:00Z',
-    updated_at: '2024-03-22T14:00:00Z',
-    author: '安全部',
-    version: '1.0.5',
-    severity: 'critical',
-    conflict_resolution: 'abort',
-    fallback_action: 'block',
-    alert_level: 'critical',
-    enabled: true,
-    tags: ['temperature', 'safety']
-  }
-];
-
-// 空模板
-const emptyConstraint: Constraint = {
-  constraint_id: '',
-  name: '',
-  description: '',
-  category: 'time',
-  type: 'hard',
-  expression: '',
-  operator: '<=',
-  target_field: '',
-  applies_to: [],
-  scope: 'workflow',
-  priority: 5,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-  author: 'Current User',
-  version: '1.0.0',
-  severity: 'medium',
-  conflict_resolution: 'priority',
-  fallback_action: 'alert',
-  alert_level: 'medium',
-  enabled: false,
-    tags: []
-};
+// 从共享库导入约束数据和工具函数
+// 约束列表在 src/shared/constraintLibrary.ts 中集中管理
 
 export default function ConstraintConfiguration() {
-  const [constraints, setConstraints] = useState<Constraint[]>(initialConstraints);
+  const [constraints, setConstraints] = useState<Constraint[]>(constraintLibrary);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [selectedConstraint, setSelectedConstraint] = useState<Constraint | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<Constraint>(emptyConstraint);
+  const [formData, setFormData] = useState<Constraint>(createEmptyConstraint());
   const [activeTab, setActiveTab] = useState<'basic' | 'expression' | 'resolution'>('basic');
 
   // Filter constraints by category, type, and search
@@ -285,12 +90,7 @@ export default function ConstraintConfiguration() {
   };
 
   const handleCreateNew = () => {
-    const newConstraint: Constraint = {
-      ...emptyConstraint,
-      constraint_id: `constraint_${Date.now()}`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    const newConstraint = createEmptyConstraint();
     setFormData(newConstraint);
     setSelectedConstraint(null);
     setIsEditing(true);
@@ -337,7 +137,7 @@ export default function ConstraintConfiguration() {
       case 'high': return 'text-[#f59e0b]';
       case 'medium': return 'text-[#3b82f6]';
       case 'low': return 'text-[#10b981]';
-      default: return 'text-[#94a3b8]';
+      default: return 'text-[#64748b]';
     }
   };
 
@@ -351,21 +151,21 @@ export default function ConstraintConfiguration() {
   return (
     <div className="h-full flex flex-col text-sm">
       {/* Header Toolbar - Palantir Style */}
-      <div className="h-9 px-3 border-b border-[#334155] flex items-center justify-between bg-[#334155] shrink-0">
+      <div className="h-9 px-3 border-b border-[#e2e8f0] flex items-center justify-between bg-white shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Command size={12} className="text-[#94a3b8]" />
+            <Command size={12} className="text-[#64748b]" />
             <span className="text-[10px] text-[#64748b]">约束规则</span>
           </div>
           <div className="h-4 w-px bg-[#475569]" />
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCommandPalette(true)}
-              className="flex items-center gap-2 px-2 py-1 bg-[#1e293b] rounded-sm border border-[#3d5166] hover:border-[#5a6f85] transition-colors"
+              className="flex items-center gap-2 px-2 py-1 bg-[#f8fafc] rounded-sm border border-[#e2e8f0] hover:border-[#5a6f85] transition-colors"
             >
-              <Search size={12} className="text-[#94a3b8]" />
-              <span className="text-xs text-[#94a3b8]">搜索约束...</span>
-              <span className="text-[10px] text-[#64748b] px-1 border border-[#334155] rounded">⌘K</span>
+              <Search size={12} className="text-[#64748b]" />
+              <span className="text-xs text-[#64748b]">搜索约束...</span>
+              <span className="text-[10px] text-[#64748b] px-1 border border-[#e2e8f0] rounded">⌘K</span>
             </button>
           </div>
         </div>
@@ -381,24 +181,24 @@ export default function ConstraintConfiguration() {
       </div>
 
       {/* Stats Bar - Technical Metrics */}
-      <div className="h-8 px-3 border-b border-[#334155] flex items-center gap-6 bg-[#1e293b] text-[10px] text-[#94a3b8] shrink-0">
+      <div className="h-8 px-3 border-b border-[#e2e8f0] flex items-center gap-6 bg-[#f8fafc] text-[10px] text-[#64748b] shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-[#f1f5f9] font-mono text-xs">{constraints.length}</span>
+          <span className="text-[#1e293b] font-mono text-xs">{constraints.length}</span>
           <span>约束总数</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
-          <span className="text-[#f1f5f9] font-mono text-xs">{stats.hardCount}</span>
+          <span className="text-[#1e293b] font-mono text-xs">{stats.hardCount}</span>
           <span>硬约束</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-          <span className="text-[#f1f5f9] font-mono text-xs">{stats.active}</span>
+          <span className="text-[#1e293b] font-mono text-xs">{stats.active}</span>
           <span>运行中</span>
         </div>
         <div className="flex items-center gap-2">
           <Feather size={10} className="text-[#3b82f6]" />
-          <span className="text-[#f1f5f9] font-mono text-xs">{stats.softCount}</span>
+          <span className="text-[#1e293b] font-mono text-xs">{stats.softCount}</span>
           <span>软约束</span>
         </div>
       </div>
@@ -406,54 +206,54 @@ export default function ConstraintConfiguration() {
       {/* Main Content - 3 Panel Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Category Navigation */}
-        <div className="w-44 bg-[#334155] border-r border-[#3d5166] flex flex-col shrink-0">
-          <div className="h-7 px-3 border-b border-[#3d5166] flex items-center bg-[#334155]">
-            <Filter size={10} className="text-[#94a3b8] mr-2" />
-            <span className="text-[10px] font-semibold text-[#cbd5e1] uppercase tracking-wider">类型</span>
+        <div className="w-44 bg-white border-r border-[#e2e8f0] flex flex-col shrink-0">
+          <div className="h-7 px-3 border-b border-[#e2e8f0] flex items-center bg-white">
+            <Filter size={10} className="text-[#64748b] mr-2" />
+            <span className="text-[10px] font-semibold text-[#475569] uppercase tracking-wider">类型</span>
           </div>
-          <div className="py-1 border-b border-[#3d5166]">
+          <div className="py-1 border-b border-[#e2e8f0]">
             <button
               onClick={() => setSelectedType('all')}
               className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors ${
                 selectedType === 'all'
                   ? 'bg-[#3b82f6]/20 text-[#3b82f6] border-l-2 border-[#3b82f6]'
-                  : 'text-[#cbd5e1] hover:bg-[#475569] border-l-2 border-transparent'
+                  : 'text-[#475569] hover:bg-[#f1f5f9] border-l-2 border-transparent'
               }`}
             >
               <span>全部约束</span>
-              <span className="font-mono text-[10px] bg-[#1e293b] px-1.5 py-0.5 rounded">{typeCounts.all}</span>
+              <span className="font-mono text-[10px] bg-[#f8fafc] px-1.5 py-0.5 rounded">{typeCounts.all}</span>
             </button>
             <button
               onClick={() => setSelectedType('hard')}
               className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors ${
                 selectedType === 'hard'
                   ? 'bg-[#ef4444]/20 text-[#ef4444] border-l-2 border-[#ef4444]'
-                  : 'text-[#cbd5e1] hover:bg-[#475569] border-l-2 border-transparent'
+                  : 'text-[#475569] hover:bg-[#f1f5f9] border-l-2 border-transparent'
               }`}
             >
               <div className="flex items-center gap-2">
                 <Shield size={12} />
                 <span>硬约束</span>
               </div>
-              <span className="font-mono text-[10px] bg-[#1e293b] px-1.5 py-0.5 rounded">{typeCounts.hard}</span>
+              <span className="font-mono text-[10px] bg-[#f8fafc] px-1.5 py-0.5 rounded">{typeCounts.hard}</span>
             </button>
             <button
               onClick={() => setSelectedType('soft')}
               className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors ${
                 selectedType === 'soft'
                   ? 'bg-[#3b82f6]/20 text-[#3b82f6] border-l-2 border-[#3b82f6]'
-                  : 'text-[#cbd5e1] hover:bg-[#475569] border-l-2 border-transparent'
+                  : 'text-[#475569] hover:bg-[#f1f5f9] border-l-2 border-transparent'
               }`}
             >
               <div className="flex items-center gap-2">
                 <Feather size={12} />
                 <span>软约束</span>
               </div>
-              <span className="font-mono text-[10px] bg-[#1e293b] px-1.5 py-0.5 rounded">{typeCounts.soft}</span>
+              <span className="font-mono text-[10px] bg-[#f8fafc] px-1.5 py-0.5 rounded">{typeCounts.soft}</span>
             </button>
           </div>
-          <div className="h-7 px-3 border-b border-[#3d5166] flex items-center bg-[#334155]">
-            <span className="text-[10px] font-semibold text-[#cbd5e1] uppercase tracking-wider">类别</span>
+          <div className="h-7 px-3 border-b border-[#e2e8f0] flex items-center bg-white">
+            <span className="text-[10px] font-semibold text-[#475569] uppercase tracking-wider">类别</span>
           </div>
           <div className="flex-1 overflow-auto py-1">
             {Object.entries(categoryLabels).map(([key, label]) => (
@@ -463,23 +263,23 @@ export default function ConstraintConfiguration() {
                 className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors ${
                   selectedCategory === key
                     ? 'bg-[#3b82f6]/20 text-[#3b82f6] border-l-2 border-[#3b82f6]'
-                    : 'text-[#cbd5e1] hover:bg-[#475569] border-l-2 border-transparent'
+                    : 'text-[#475569] hover:bg-[#f1f5f9] border-l-2 border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <span style={{ color: categoryColors[key] }}>{categoryIcons[key]}</span>
+                  <span style={{ color: categoryColors[key as Constraint['category']] }}>{categoryIcons[key]}</span>
                   <span>{label}</span>
                 </div>
-                <span className="font-mono text-[10px] bg-[#1e293b] px-1.5 py-0.5 rounded">{categoryCounts[key] || 0}</span>
+                <span className="font-mono text-[10px] bg-[#f8fafc] px-1.5 py-0.5 rounded">{categoryCounts[key] || 0}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Center Panel - Constraint List */}
-        <div className="flex-1 flex flex-col bg-[#1e293b] min-w-0">
+        <div className="flex-1 flex flex-col bg-[#f8fafc] min-w-0">
           {/* List Header */}
-          <div className="h-8 px-3 border-b border-[#334155] flex items-center bg-[#253449] text-[10px] text-[#94a3b8] shrink-0">
+          <div className="h-8 px-3 border-b border-[#e2e8f0] flex items-center bg-white text-[10px] text-[#64748b] shrink-0">
             <div className="flex-1">约束ID / 名称</div>
             <div className="w-16 text-center">类型</div>
             <div className="w-16 text-center">严重</div>
@@ -495,27 +295,37 @@ export default function ConstraintConfiguration() {
               <div
                 key={constraint.constraint_id}
                 onClick={() => handleSelectConstraint(constraint)}
-                className={`px-3 py-2 border-b border-[#334155] flex items-center cursor-pointer transition-colors ${
+                className={`px-3 py-2 border-b border-[#e2e8f0] flex items-center cursor-pointer transition-colors ${
                   selectedConstraint?.constraint_id === constraint.constraint_id
-                    ? 'bg-[#3b82f6]/10 border-l-2 border-l-[#3b82f6]'
-                    : 'hover:bg-[#253449] border-l-2 border-l-transparent'
+                    ? 'bg-[#3b82f6]/5 border-l-2 border-l-[#3b82f6]'
+                    : 'hover:bg-white border-l-2 border-l-transparent'
                 }`}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <code className="text-[10px] text-[#3b82f6] font-mono">{constraint.constraint_id}</code>
-                    <span className="text-xs text-[#f1f5f9] truncate">{constraint.name}</span>
+                    <span className="text-xs text-[#1e293b] truncate">{constraint.name}</span>
+                    {/* Nature Tag */}
+                    <span
+                      className="text-[9px] px-1.5 py-0.5 rounded-sm font-medium shrink-0"
+                      style={{
+                        backgroundColor: `${natureColors[constraint.nature || 'static']}15`,
+                        color: natureColors[constraint.nature || 'static']
+                      }}
+                    >
+                      {natureLabels[constraint.nature || 'static']}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] text-[#94a3b8]">{categoryLabels[constraint.category]}</span>
+                    <span className="text-[10px] text-[#64748b]">{categoryLabels[constraint.category]}</span>
                     <span className="text-[10px] text-[#64748b] font-mono">{constraint.expression.substring(0, 30)}...</span>
                   </div>
                 </div>
                 <div className="w-16 flex justify-center">
                   <span className={`text-[10px] px-2 py-0.5 rounded-sm font-medium ${
                     constraint.type === 'hard'
-                      ? 'bg-[#ef4444]/20 text-[#ef4444]'
-                      : 'bg-[#3b82f6]/20 text-[#3b82f6]'
+                      ? 'bg-[#ef4444]/10 text-[#ef4444]'
+                      : 'bg-[#3b82f6]/10 text-[#3b82f6]'
                   }`}>
                     {constraint.type === 'hard' ? 'HARD' : 'SOFT'}
                   </span>
@@ -526,7 +336,7 @@ export default function ConstraintConfiguration() {
                 <div className="w-20 text-right font-mono text-xs text-[#f59e0b]">
                   {constraint.priority}
                 </div>
-                <div className="w-20 text-right font-mono text-xs text-[#94a3b8]">
+                <div className="w-20 text-right font-mono text-xs text-[#64748b]">
                   {constraint.tags.length}
                 </div>
                 <div className="w-20 text-center">
@@ -541,8 +351,8 @@ export default function ConstraintConfiguration() {
                     onClick={(e) => { e.stopPropagation(); handleToggleActive(constraint); }}
                     className={`p-1 rounded-sm transition-colors ${
                       constraint.enabled
-                        ? 'text-[#10b981] hover:bg-[#10b981]/20'
-                        : 'text-[#64748b] hover:bg-[#475569]'
+                        ? 'text-[#10b981] hover:bg-[#10b981]/10'
+                        : 'text-[#64748b] hover:bg-[#f1f5f9]'
                     }`}
                   >
                     {constraint.enabled ? <Play size={12} /> : <Pause size={12} />}
@@ -554,18 +364,18 @@ export default function ConstraintConfiguration() {
         </div>
 
         {/* Right Panel - Properties/Editor */}
-        <div className="w-96 bg-[#334155] border-l border-[#3d5166] flex flex-col shrink-0">
+        <div className="w-96 bg-white border-l border-[#e2e8f0] flex flex-col shrink-0">
           {selectedConstraint || isEditing ? (
             <>
               {/* Panel Header */}
-              <div className="h-10 px-3 border-b border-[#3d5166] flex items-center justify-between bg-[#334155] shrink-0">
+              <div className="h-10 px-3 border-b border-[#e2e8f0] flex items-center justify-between bg-white shrink-0">
                 <div className="flex items-center gap-2">
                   {formData.type === 'hard' ? (
                     <Shield size={14} className="text-[#ef4444]" />
                   ) : (
                     <Feather size={14} className="text-[#3b82f6]" />
                   )}
-                  <span className="text-xs font-medium text-[#f1f5f9]">
+                  <span className="text-xs font-medium text-[#1e293b]">
                     {isEditing ? (selectedConstraint ? '编辑约束' : '新建约束') : '约束详情'}
                   </span>
                 </div>
@@ -573,9 +383,9 @@ export default function ConstraintConfiguration() {
                   {!isEditing && (
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="p-1.5 hover:bg-[#475569] rounded-sm"
+                      className="p-1.5 hover:bg-[#f1f5f9] rounded-sm"
                     >
-                      <Edit2 size={14} className="text-[#94a3b8]" />
+                      <Edit2 size={14} className="text-[#64748b]" />
                     </button>
                   )}
                 </div>
@@ -585,7 +395,7 @@ export default function ConstraintConfiguration() {
                 // Edit Mode
                 <>
                   {/* Tabs */}
-                  <div className="px-3 border-b border-[#3d5166] bg-[#334155] flex items-center gap-1 shrink-0">
+                  <div className="px-3 border-b border-[#e2e8f0] bg-white flex items-center gap-1 shrink-0">
                     {(['basic', 'expression', 'resolution'] as const).map((tab) => (
                       <button
                         key={tab}
@@ -593,7 +403,7 @@ export default function ConstraintConfiguration() {
                         className={`px-3 py-2 text-[10px] border-b-2 transition-colors ${
                           activeTab === tab
                             ? 'text-[#3b82f6] border-[#3b82f6]'
-                            : 'text-[#94a3b8] border-transparent hover:text-[#cbd5e1]'
+                            : 'text-[#64748b] border-transparent hover:text-[#475569]'
                         }`}
                       >
                         {tab === 'basic' && '基本信息'}
@@ -604,69 +414,82 @@ export default function ConstraintConfiguration() {
                   </div>
 
                   {/* Edit Form */}
-                  <div className="flex-1 overflow-auto p-3">
+                  <div className="flex-1 overflow-auto p-3 bg-white">
                     {activeTab === 'basic' && (
                       <div className="space-y-3">
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">约束ID</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">约束ID</label>
                           <input
                             type="text"
                             value={formData.constraint_id}
                             onChange={(e) => setFormData({ ...formData, constraint_id: e.target.value })}
                             disabled={!!selectedConstraint}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none disabled:opacity-50 font-mono"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none disabled:opacity-50 font-mono"
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">名称</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">名称</label>
                           <input
                             type="text"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           <div>
-                            <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">类型</label>
+                            <label className="text-[10px] text-[#64748b] uppercase block mb-1">类型</label>
                             <select
                               value={formData.type}
                               onChange={(e) => setFormData({ ...formData, type: e.target.value as 'hard' | 'soft' })}
-                              className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none"
+                              className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
                             >
                               <option value="hard">硬约束</option>
                               <option value="soft">软约束</option>
                             </select>
                           </div>
                           <div>
-                            <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">类别</label>
+                            <label className="text-[10px] text-[#64748b] uppercase block mb-1">类别</label>
                             <select
                               value={formData.category}
                               onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                              className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none"
+                              className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
                             >
                               {Object.entries(categoryLabels).map(([key, label]) => (
                                 <option key={key} value={key}>{label}</option>
                               ))}
                             </select>
                           </div>
+                          <div>
+                            <label className="text-[10px] text-[#64748b] uppercase block mb-1">性质</label>
+                            <select
+                              value={formData.nature || 'static'}
+                              onChange={(e) => setFormData({ ...formData, nature: e.target.value as ConstraintNature })}
+                              className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
+                              style={{ color: natureColors[formData.nature || 'static'] }}
+                            >
+                              <option value="static" style={{ color: natureColors.static }}>静态</option>
+                              <option value="dynamic" style={{ color: natureColors.dynamic }}>动态</option>
+                              <option value="conditional" style={{ color: natureColors.conditional }}>条件</option>
+                            </select>
+                          </div>
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">描述</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">描述</label>
                           <textarea
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             rows={2}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none resize-none"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none resize-none"
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">严重等级</label>
+                            <label className="text-[10px] text-[#64748b] uppercase block mb-1">严重等级</label>
                             <select
                               value={formData.severity}
                               onChange={(e) => setFormData({ ...formData, severity: e.target.value as any })}
-                              className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none"
+                              className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
                             >
                               <option value="critical">严重</option>
                               <option value="high">高</option>
@@ -675,39 +498,214 @@ export default function ConstraintConfiguration() {
                             </select>
                           </div>
                           <div>
-                            <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">优先级 (1-10)</label>
+                            <label className="text-[10px] text-[#64748b] uppercase block mb-1">优先级 (1-10)</label>
                             <input
                               type="number"
                               min={1}
                               max={10}
                               value={formData.priority}
                               onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 5 })}
-                              className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none"
+                              className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
                             />
                           </div>
                         </div>
+
+                        {/* Dynamic Configuration Section */}
+                        {formData.nature === 'dynamic' && (
+                          <div className="mt-4 pt-4 border-t border-[#e2e8f0]">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Zap size={14} className="text-[#f59e0b]" />
+                              <span className="text-xs font-semibold text-[#475569] uppercase tracking-wider">动态配置</span>
+                            </div>
+                            <div className="space-y-3">
+                              <div>
+                                <label className="text-[10px] text-[#64748b] uppercase block mb-1">更新频率</label>
+                                <select
+                                  value={formData.dynamicConfig?.updateFrequency || 'realtime'}
+                                  onChange={(e) => setFormData({
+                                    ...formData,
+                                    dynamicConfig: {
+                                      ...formData.dynamicConfig,
+                                      updateFrequency: e.target.value as 'realtime' | 'hourly' | 'daily' | 'weekly'
+                                    }
+                                  })}
+                                  className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
+                                >
+                                  <option value="realtime">实时</option>
+                                  <option value="hourly">每小时</option>
+                                  <option value="daily">每天</option>
+                                  <option value="weekly">每周</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-[#64748b] uppercase block mb-1">上下文变量 (逗号分隔)</label>
+                                <input
+                                  type="text"
+                                  value={formData.dynamicConfig?.contextVariables?.join(', ') || ''}
+                                  onChange={(e) => setFormData({
+                                    ...formData,
+                                    dynamicConfig: {
+                                      ...formData.dynamicConfig,
+                                      contextVariables: e.target.value.split(',').map(v => v.trim()).filter(Boolean)
+                                    }
+                                  })}
+                                  placeholder="current_load, resource_availability"
+                                  className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none font-mono"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-[#64748b] uppercase block mb-1">计算公式</label>
+                                <textarea
+                                  value={formData.dynamicConfig?.calculationFormula || ''}
+                                  onChange={(e) => setFormData({
+                                    ...formData,
+                                    dynamicConfig: {
+                                      ...formData.dynamicConfig,
+                                      calculationFormula: e.target.value
+                                    }
+                                  })}
+                                  rows={3}
+                                  placeholder="base_capacity * load_factor + buffer"
+                                  className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#334155] rounded-sm text-xs text-[#10b981] font-mono focus:border-[#3b82f6] outline-none resize-none"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Conditional Rules Section */}
+                        {formData.nature === 'conditional' && (
+                          <div className="mt-4 pt-4 border-t border-[#e2e8f0]">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <GitBranch size={14} className="text-[#8b5cf6]" />
+                                <span className="text-xs font-semibold text-[#475569] uppercase tracking-wider">条件规则</span>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const newRule: ConditionalRule = {
+                                    condition: 'context.priority == "urgent"',
+                                    threshold: 0.9,
+                                    priority: 10,
+                                    description: '高优先级订单'
+                                  };
+                                  setFormData({
+                                    ...formData,
+                                    conditionalRules: [...(formData.conditionalRules || []), newRule]
+                                  });
+                                }}
+                                className="px-2 py-1 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-sm text-[10px] flex items-center gap-1 transition-colors"
+                              >
+                                <Plus size={10} />
+                                添加规则
+                              </button>
+                            </div>
+                            <div className="space-y-2">
+                              {(formData.conditionalRules || []).map((rule, idx) => (
+                                <div key={idx} className="border border-[#e2e8f0] rounded-md p-3 bg-[#f8fafc]">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="w-5 h-5 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] text-[10px] font-bold flex items-center justify-center">{idx + 1}</span>
+                                    <button
+                                      onClick={() => {
+                                        const updated = (formData.conditionalRules || []).filter((_, i) => i !== idx);
+                                        setFormData({ ...formData, conditionalRules: updated });
+                                      }}
+                                      className="p-1 hover:bg-[#ef4444]/10 text-[#64748b] hover:text-[#ef4444] rounded transition-colors"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <div>
+                                      <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">描述</label>
+                                      <input
+                                        type="text"
+                                        value={rule.description || ''}
+                                        onChange={(e) => {
+                                          const updated = [...(formData.conditionalRules || [])];
+                                          updated[idx] = { ...rule, description: e.target.value };
+                                          setFormData({ ...formData, conditionalRules: updated });
+                                        }}
+                                        className="w-full px-2 py-1 bg-white border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
+                                      />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">条件</label>
+                                        <input
+                                          type="text"
+                                          value={rule.condition}
+                                          onChange={(e) => {
+                                            const updated = [...(formData.conditionalRules || [])];
+                                            updated[idx] = { ...rule, condition: e.target.value };
+                                            setFormData({ ...formData, conditionalRules: updated });
+                                          }}
+                                          placeholder="context.priority == 'urgent'"
+                                          className="w-full px-2 py-1 bg-[#1e293b] border border-[#334155] rounded-sm text-xs text-[#3b82f6] font-mono focus:border-[#3b82f6] outline-none"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">阈值</label>
+                                        <input
+                                          type="text"
+                                          value={rule.threshold}
+                                          onChange={(e) => {
+                                            const updated = [...(formData.conditionalRules || [])];
+                                            updated[idx] = { ...rule, threshold: e.target.value };
+                                            setFormData({ ...formData, conditionalRules: updated });
+                                          }}
+                                          className="w-full px-2 py-1 bg-white border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none font-mono"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">优先级权重</label>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={100}
+                                        value={rule.priority}
+                                        onChange={(e) => {
+                                          const updated = [...(formData.conditionalRules || [])];
+                                          updated[idx] = { ...rule, priority: parseInt(e.target.value) || 1 };
+                                          setFormData({ ...formData, conditionalRules: updated });
+                                        }}
+                                        className="w-full px-2 py-1 bg-white border border-[#e2e8f0] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                              {(formData.conditionalRules || []).length === 0 && (
+                                <div className="text-center py-4 text-[#94a3b8] text-xs">
+                                  暂无规则，点击上方按钮添加
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
                     {activeTab === 'expression' && (
                       <div className="space-y-3">
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">约束表达式</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">约束表达式</label>
                           <textarea
                             value={formData.expression}
                             onChange={(e) => setFormData({ ...formData, expression: e.target.value })}
                             rows={4}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#10b981] font-mono focus:border-[#3b82f6] outline-none resize-none"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#10b981] font-mono focus:border-[#3b82f6] outline-none resize-none"
                             placeholder="delivery_date <= deadline"
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">操作符</label>
+                            <label className="text-[10px] text-[#64748b] uppercase block mb-1">操作符</label>
                             <select
                               value={formData.operator}
                               onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
-                              className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none"
+                              className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
                             >
                               <option value="<=">&lt;=</option>
                               <option value="<">&lt;</option>
@@ -719,22 +717,22 @@ export default function ConstraintConfiguration() {
                             </select>
                           </div>
                           <div>
-                            <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">目标字段</label>
+                            <label className="text-[10px] text-[#64748b] uppercase block mb-1">目标字段</label>
                             <input
                               type="text"
                               value={formData.target_field}
                               onChange={(e) => setFormData({ ...formData, target_field: e.target.value })}
-                              className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none font-mono"
+                              className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none font-mono"
                             />
                           </div>
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">阈值 (可选)</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">阈值 (可选)</label>
                           <input
                             type="text"
                             value={formData.threshold || ''}
                             onChange={(e) => setFormData({ ...formData, threshold: e.target.value })}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none font-mono"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none font-mono"
                           />
                         </div>
                       </div>
@@ -743,11 +741,11 @@ export default function ConstraintConfiguration() {
                     {activeTab === 'resolution' && (
                       <div className="space-y-3">
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">冲突解决策略</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">冲突解决策略</label>
                           <select
                             value={formData.conflict_resolution}
                             onChange={(e) => setFormData({ ...formData, conflict_resolution: e.target.value })}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
                           >
                             <option value="priority">按优先级</option>
                             <option value="weighted">按权重</option>
@@ -756,11 +754,11 @@ export default function ConstraintConfiguration() {
                           </select>
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">回退动作</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">回退动作</label>
                           <select
                             value={formData.fallback_action}
                             onChange={(e) => setFormData({ ...formData, fallback_action: e.target.value })}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
                           >
                             <option value="block">阻断</option>
                             <option value="alert">告警</option>
@@ -768,11 +766,11 @@ export default function ConstraintConfiguration() {
                           </select>
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">告警级别</label>
+                          <label className="text-[10px] text-[#64748b] uppercase block mb-1">告警级别</label>
                           <select
                             value={formData.alert_level}
                             onChange={(e) => setFormData({ ...formData, alert_level: e.target.value })}
-                            className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none"
+                            className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
                           >
                             <option value="critical">严重</option>
                             <option value="high">高</option>
@@ -782,7 +780,7 @@ export default function ConstraintConfiguration() {
                         </div>
                         {formData.type === 'soft' && (
                           <div>
-                            <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">权重 (0-1)</label>
+                            <label className="text-[10px] text-[#64748b] uppercase block mb-1">权重 (0-1)</label>
                             <input
                               type="number"
                               min={0}
@@ -790,7 +788,7 @@ export default function ConstraintConfiguration() {
                               step={0.1}
                               value={formData.weight || 0.5}
                               onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) })}
-                              className="w-full px-2 py-1.5 bg-[#1e293b] border border-[#475569] rounded-sm text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none"
+                              className="w-full px-2 py-1.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-sm text-xs text-[#1e293b] focus:border-[#3b82f6] outline-none"
                             />
                           </div>
                         )}
@@ -799,10 +797,10 @@ export default function ConstraintConfiguration() {
                   </div>
 
                   {/* Edit Actions */}
-                  <div className="p-3 border-t border-[#3d5166] flex items-center justify-end gap-2 shrink-0">
+                  <div className="p-3 border-t border-[#e2e8f0] flex items-center justify-end gap-2 shrink-0">
                     <button
                       onClick={() => { setIsEditing(false); if (selectedConstraint) setFormData(selectedConstraint); }}
-                      className="px-3 py-1.5 text-xs text-[#94a3b8] hover:text-[#f1f5f9] transition-colors"
+                      className="px-3 py-1.5 text-xs text-[#64748b] hover:text-[#1e293b] transition-colors"
                     >
                       取消
                     </button>
@@ -817,86 +815,197 @@ export default function ConstraintConfiguration() {
                 </>
               ) : (
                 // View Mode - Runtime Metrics
-                <div className="flex-1 overflow-auto">
-                  {/* Status Badge */}
-                  <div className="p-3 border-b border-[#3d5166]">
-                    <div className="flex items-center justify-between">
-                      <code className="text-xs text-[#3b82f6] font-mono">{selectedConstraint?.constraint_id}</code>
-                      <span className={`px-2 py-0.5 rounded-sm text-[10px] flex items-center gap-1 ${
+                <div className="flex-1 overflow-auto p-4 space-y-4">
+                  {/* Header Card */}
+                  <div className="bg-gradient-to-br from-[#f8fafc] to-white rounded-lg p-4 border border-[#e2e8f0] shadow-sm">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          selectedConstraint?.type === 'hard' ? 'bg-[#ef4444]/10' : 'bg-[#3b82f6]/10'
+                        }`}>
+                          {selectedConstraint?.type === 'hard' ? (
+                            <Shield size={16} className="text-[#ef4444]" />
+                          ) : (
+                            <Feather size={16} className="text-[#3b82f6]" />
+                          )}
+                        </div>
+                        <div>
+                          <code className="text-[10px] text-[#3b82f6] font-mono">{selectedConstraint?.constraint_id}</code>
+                          <h3 className="text-sm font-semibold text-[#1e293b]">{selectedConstraint?.name}</h3>
+                        </div>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-medium flex items-center gap-1.5 ${
                         selectedConstraint?.enabled
-                          ? 'bg-[#10b981]/20 text-[#10b981]'
-                          : 'bg-[#64748b]/20 text-[#64748b]'
+                          ? 'bg-[#10b981]/10 text-[#10b981]'
+                          : 'bg-[#64748b]/10 text-[#64748b]'
                       }`}>
-                        {selectedConstraint?.enabled ? <Play size={10} /> : <Pause size={10} />}
+                        <span className={`w-1.5 h-1.5 rounded-full ${selectedConstraint?.enabled ? 'bg-[#10b981] animate-pulse' : 'bg-[#64748b]'}`} />
                         {selectedConstraint?.enabled ? '运行中' : '已停止'}
                       </span>
                     </div>
-                    <h3 className="text-sm font-medium text-[#f1f5f9] mt-2">{selectedConstraint?.name}</h3>
-                    <p className="text-xs text-[#94a3b8] mt-1">{selectedConstraint?.description}</p>
+                    <p className="text-xs text-[#64748b] leading-relaxed">{selectedConstraint?.description}</p>
                   </div>
 
-                  {/* Expression */}
-                  <div className="p-3 border-b border-[#3d5166]">
-                    <div className="text-[10px] text-[#94a3b8] uppercase mb-2">约束表达式</div>
-                    <div className="bg-[#1e293b] rounded-sm p-2 font-mono text-xs text-[#10b981]">
-                      {selectedConstraint?.expression}
+                  {/* Expression Card */}
+                  <div className="bg-white rounded-lg border border-[#e2e8f0] overflow-hidden">
+                    <div className="px-3 py-2 bg-[#f8fafc] border-b border-[#e2e8f0] flex items-center gap-2">
+                      <FileCode size={12} className="text-[#64748b]" />
+                      <span className="text-[10px] font-semibold text-[#475569] uppercase tracking-wider">约束表达式</span>
                     </div>
-                    <div className="flex items-center gap-4 mt-2 text-[10px]">
-                      <span className="text-[#64748b]">操作符: <span className="text-[#f1f5f9] font-mono">{selectedConstraint?.operator}</span></span>
-                      <span className="text-[#64748b]">目标: <span className="text-[#f1f5f9] font-mono">{selectedConstraint?.target_field}</span></span>
+                    <div className="p-3">
+                      <div className="bg-[#1e293b] rounded-md p-3 font-mono text-xs text-[#10b981] overflow-x-auto">
+                        {selectedConstraint?.expression}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 mt-3">
+                        <div className="bg-[#f8fafc] rounded-md p-2">
+                          <span className="text-[10px] text-[#94a3b8] block mb-1">操作符</span>
+                          <code className="text-xs text-[#1e293b] font-mono font-semibold">{selectedConstraint?.operator}</code>
+                        </div>
+                        <div className="bg-[#f8fafc] rounded-md p-2">
+                          <span className="text-[10px] text-[#94a3b8] block mb-1">目标字段</span>
+                          <code className="text-xs text-[#1e293b] font-mono font-semibold">{selectedConstraint?.target_field}</code>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   {/* Tags */}
-                  <div className="p-3 border-b border-[#3d5166]">
-                    <div className="text-[10px] text-[#94a3b8] uppercase mb-2">标签</div>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedConstraint?.tags.map((tag, idx) => (
-                        <span key={idx} className="px-2 py-0.5 bg-[#1e293b] text-[#94a3b8] text-[10px] rounded font-mono">{tag}</span>
+                  {selectedConstraint?.tags && selectedConstraint.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedConstraint.tags.map((tag, idx) => (
+                        <span key={idx} className="px-2.5 py-1 bg-[#f1f5f9] text-[#475569] text-[10px] rounded-full font-medium border border-[#e2e8f0]">
+                          {tag}
+                        </span>
                       ))}
                     </div>
-                  </div>
+                  )}
 
-                  {/* Configuration */}
-                  <div className="p-3 border-b border-[#3d5166]">
-                    <div className="text-[10px] text-[#94a3b8] uppercase mb-2">配置信息</div>
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#94a3b8]">类型</span>
-                        <span className={selectedConstraint?.type === 'hard' ? 'text-[#ef4444]' : 'text-[#3b82f6]'}>
+                  {/* Configuration Grid */}
+                  <div className="bg-white rounded-lg border border-[#e2e8f0] overflow-hidden">
+                    <div className="px-3 py-2 bg-[#f8fafc] border-b border-[#e2e8f0] flex items-center gap-2">
+                      <Settings size={12} className="text-[#64748b]" />
+                      <span className="text-[10px] font-semibold text-[#475569] uppercase tracking-wider">配置信息</span>
+                    </div>
+                    <div className="p-3 grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-[#94a3b8] uppercase">类型</span>
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${
+                          selectedConstraint?.type === 'hard'
+                            ? 'bg-[#ef4444]/10 text-[#ef4444]'
+                            : 'bg-[#3b82f6]/10 text-[#3b82f6]'
+                        }`}>
+                          {selectedConstraint?.type === 'hard' ? <Shield size={12} /> : <Feather size={12} />}
                           {selectedConstraint?.type === 'hard' ? '硬约束' : '软约束'}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-[#94a3b8] uppercase">类别</span>
+                        <span className="block text-xs text-[#1e293b] font-medium">{selectedConstraint?.category && categoryLabels[selectedConstraint.category]}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-[#94a3b8] uppercase">性质</span>
+                        <span
+                          className="inline-block px-2 py-1 rounded-md text-[10px] font-semibold"
+                          style={{
+                            backgroundColor: `${natureColors[selectedConstraint?.nature || 'static']}15`,
+                            color: natureColors[selectedConstraint?.nature || 'static']
+                          }}
+                        >
+                          {natureLabels[selectedConstraint?.nature || 'static']}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#94a3b8]">类别</span>
-                        <span className="text-[#f1f5f9]">{selectedConstraint?.category && categoryLabels[selectedConstraint.category]}</span>
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-[#94a3b8] uppercase">优先级</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-lg font-bold text-[#f59e0b]">{selectedConstraint?.priority}</span>
+                          <span className="text-[10px] text-[#94a3b8]">/ 100</span>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#94a3b8]">优先级</span>
-                        <span className="font-mono text-[#f59e0b]">{selectedConstraint?.priority}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#94a3b8]">严重等级</span>
-                        <span className={`uppercase ${getSeverityColor(selectedConstraint?.severity)}`}>{selectedConstraint?.severity}</span>
+                      <div className="space-y-1 col-span-2">
+                        <span className="text-[10px] text-[#94a3b8] uppercase">严重等级</span>
+                        <span className={`inline-block px-2 py-1 rounded-md text-[10px] font-semibold uppercase ${
+                          selectedConstraint?.severity === 'critical' ? 'bg-[#ef4444]/10 text-[#ef4444]' :
+                          selectedConstraint?.severity === 'high' ? 'bg-[#f59e0b]/10 text-[#f59e0b]' :
+                          selectedConstraint?.severity === 'medium' ? 'bg-[#3b82f6]/10 text-[#3b82f6]' :
+                          'bg-[#10b981]/10 text-[#10b981]'
+                        }`}>{selectedConstraint?.severity}</span>
                       </div>
                     </div>
                   </div>
 
+                  {/* Dynamic/Conditional Config */}
+                  {selectedConstraint?.nature === 'dynamic' && selectedConstraint.dynamicConfig && (
+                    <div className="bg-white rounded-lg border border-[#e2e8f0] overflow-hidden">
+                      <div className="px-3 py-2 bg-[#f8fafc] border-b border-[#e2e8f0] flex items-center gap-2">
+                        <Zap size={12} className="text-[#f59e0b]" />
+                        <span className="text-[10px] font-semibold text-[#475569] uppercase tracking-wider">动态配置</span>
+                      </div>
+                      <div className="p-3 space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-[#f8fafc] rounded-md p-2">
+                            <span className="text-[10px] text-[#94a3b8] block mb-1">更新频率</span>
+                            <span className="text-xs text-[#1e293b] font-medium">{selectedConstraint.dynamicConfig.updateFrequency}</span>
+                          </div>
+                          <div className="bg-[#f8fafc] rounded-md p-2">
+                            <span className="text-[10px] text-[#94a3b8] block mb-1">上下文变量</span>
+                            <code className="text-[10px] text-[#3b82f6] font-mono">{selectedConstraint.dynamicConfig.contextVariables?.join(', ') || '-'}</code>
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-[#94a3b8] uppercase block mb-1">计算公式</span>
+                          <code className="block text-[10px] text-[#10b981] font-mono bg-[#1e293b] px-3 py-2 rounded-md overflow-x-auto">
+                            {selectedConstraint.dynamicConfig.calculationFormula}
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedConstraint?.nature === 'conditional' && selectedConstraint.conditionalRules && (
+                    <div className="bg-white rounded-lg border border-[#e2e8f0] overflow-hidden">
+                      <div className="px-3 py-2 bg-[#f8fafc] border-b border-[#e2e8f0] flex items-center gap-2">
+                        <GitBranch size={12} className="text-[#8b5cf6]" />
+                        <span className="text-[10px] font-semibold text-[#475569] uppercase tracking-wider">条件规则</span>
+                      </div>
+                      <div className="p-3 space-y-2">
+                        {selectedConstraint.conditionalRules.map((rule, idx) => (
+                          <div key={idx} className="border border-[#e2e8f0] rounded-md p-3 bg-[#f8fafc]">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="w-5 h-5 rounded-full bg-[#f59e0b]/10 text-[#f59e0b] text-[10px] font-bold flex items-center justify-center">{idx + 1}</span>
+                              <span className="text-xs text-[#475569] font-medium">{rule.description}</span>
+                            </div>
+                            <code className="text-[10px] text-[#3b82f6] font-mono bg-white px-2 py-1 rounded block border border-[#e2e8f0]">
+                              IF {rule.condition} → 阈值: {rule.threshold}
+                            </code>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Conflict Resolution */}
-                  <div className="p-3">
-                    <div className="text-[10px] text-[#94a3b8] uppercase mb-2">冲突解决</div>
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#94a3b8]">解决策略</span>
-                        <span className="text-[#f1f5f9]">{selectedConstraint?.conflict_resolution}</span>
+                  <div className="bg-white rounded-lg border border-[#e2e8f0] overflow-hidden">
+                    <div className="px-3 py-2 bg-[#f8fafc] border-b border-[#e2e8f0] flex items-center gap-2">
+                      <AlertTriangle size={12} className="text-[#f59e0b]" />
+                      <span className="text-[10px] font-semibold text-[#475569] uppercase tracking-wider">冲突解决</span>
+                    </div>
+                    <div className="p-3 grid grid-cols-3 gap-3">
+                      <div className="text-center">
+                        <span className="text-[10px] text-[#94a3b8] uppercase block mb-1">解决策略</span>
+                        <span className="text-xs text-[#1e293b] font-medium bg-[#f8fafc] px-2 py-1 rounded-md inline-block">{selectedConstraint?.conflict_resolution}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#94a3b8]">回退动作</span>
-                        <span className="text-[#f1f5f9]">{selectedConstraint?.fallback_action}</span>
+                      <div className="text-center">
+                        <span className="text-[10px] text-[#94a3b8] uppercase block mb-1">回退动作</span>
+                        <span className="text-xs text-[#1e293b] font-medium bg-[#f8fafc] px-2 py-1 rounded-md inline-block">{selectedConstraint?.fallback_action}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#94a3b8]">告警级别</span>
-                        <span className="text-[#f1f5f9] uppercase">{selectedConstraint?.alert_level}</span>
+                      <div className="text-center">
+                        <span className="text-[10px] text-[#94a3b8] uppercase block mb-1">告警级别</span>
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-md inline-block uppercase ${
+                          selectedConstraint?.alert_level === 'critical' ? 'bg-[#ef4444]/10 text-[#ef4444]' :
+                          selectedConstraint?.alert_level === 'high' ? 'bg-[#f59e0b]/10 text-[#f59e0b]' :
+                          selectedConstraint?.alert_level === 'medium' ? 'bg-[#3b82f6]/10 text-[#3b82f6]' :
+                          'bg-[#10b981]/10 text-[#10b981]'
+                        }`}>{selectedConstraint?.alert_level}</span>
                       </div>
                     </div>
                   </div>
@@ -917,20 +1026,20 @@ export default function ConstraintConfiguration() {
       {/* Command Palette */}
       {showCommandPalette && (
         <div className="fixed inset-0 bg-black/70 flex items-start justify-center pt-32 z-50">
-          <div className="bg-[#1e293b] border border-[#3d5166] rounded-sm w-full max-w-lg shadow-2xl">
-            <div className="p-3 border-b border-[#334155] flex items-center gap-2">
-              <Search size={16} className="text-[#94a3b8]" />
+          <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-sm w-full max-w-lg shadow-2xl">
+            <div className="p-3 border-b border-[#e2e8f0] flex items-center gap-2">
+              <Search size={16} className="text-[#64748b]" />
               <input
                 type="text"
                 autoFocus
                 placeholder="搜索约束..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 bg-transparent border-none outline-none text-sm text-[#f1f5f9] placeholder:text-[#64748b]"
+                className="flex-1 bg-transparent border-none outline-none text-sm text-[#1e293b] placeholder:text-[#64748b]"
               />
               <button
                 onClick={() => setShowCommandPalette(false)}
-                className="text-[10px] text-[#64748b] px-1.5 py-0.5 border border-[#334155] rounded"
+                className="text-[10px] text-[#64748b] px-1.5 py-0.5 border border-[#e2e8f0] rounded"
               >
                 ESC
               </button>
@@ -940,7 +1049,7 @@ export default function ConstraintConfiguration() {
                 <button
                   key={constraint.constraint_id}
                   onClick={() => { handleSelectConstraint(constraint); setShowCommandPalette(false); setSearchTerm(''); }}
-                  className="w-full px-3 py-2 flex items-center gap-3 hover:bg-[#334155] transition-colors text-left"
+                  className="w-full px-3 py-2 flex items-center gap-3 hover:bg-white transition-colors text-left"
                 >
                   {constraint.type === 'hard' ? (
                     <Shield size={14} className="text-[#ef4444]" />
@@ -948,8 +1057,8 @@ export default function ConstraintConfiguration() {
                     <Feather size={14} className="text-[#3b82f6]" />
                   )}
                   <div className="flex-1">
-                    <div className="text-sm text-[#f1f5f9]">{constraint.name}</div>
-                    <div className="text-[10px] text-[#94a3b8] font-mono">{constraint.constraint_id}</div>
+                    <div className="text-sm text-[#1e293b]">{constraint.name}</div>
+                    <div className="text-[10px] text-[#64748b] font-mono">{constraint.constraint_id}</div>
                   </div>
                   <span className="text-[10px] text-[#64748b]">{categoryLabels[constraint.category]}</span>
                 </button>
@@ -960,10 +1069,10 @@ export default function ConstraintConfiguration() {
                 </div>
               )}
             </div>
-            <div className="px-3 py-2 border-t border-[#334155] flex items-center gap-4 text-[10px] text-[#64748b]">
-              <span className="flex items-center gap-1"><span className="px-1 border border-[#334155] rounded">↑↓</span> 选择</span>
-              <span className="flex items-center gap-1"><span className="px-1 border border-[#334155] rounded">↵</span> 打开</span>
-              <span className="flex items-center gap-1"><span className="px-1 border border-[#334155] rounded">esc</span> 关闭</span>
+            <div className="px-3 py-2 border-t border-[#e2e8f0] flex items-center gap-4 text-[10px] text-[#64748b]">
+              <span className="flex items-center gap-1"><span className="px-1 border border-[#e2e8f0] rounded">↑↓</span> 选择</span>
+              <span className="flex items-center gap-1"><span className="px-1 border border-[#e2e8f0] rounded">↵</span> 打开</span>
+              <span className="flex items-center gap-1"><span className="px-1 border border-[#e2e8f0] rounded">esc</span> 关闭</span>
             </div>
           </div>
         </div>
