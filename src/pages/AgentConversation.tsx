@@ -288,23 +288,6 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // 使用 ref 存储最新状态，避免闭包问题
-  const messagesRef = useRef(messages);
-  const currentChatIdRef = useRef(currentChatId);
-  const chatHistoryRef = useRef(chatHistory);
-
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
-
-  useEffect(() => {
-    currentChatIdRef.current = currentChatId;
-  }, [currentChatId]);
-
-  useEffect(() => {
-    chatHistoryRef.current = chatHistory;
-  }, [chatHistory]);
-
   // 自动滚动
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -456,33 +439,32 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
 
   // 创建新对话
   const createNewChat = useCallback(() => {
-    // 保存当前对话到历史（如果有实际消息）
-    setChatHistory(prev => {
-      const latestMessages = messagesRef.current;
-      const latestChatId = currentChatIdRef.current;
-
-      if (latestMessages.length > 1) {
-        const title = latestMessages[1]?.content?.slice(0, 20) || '新对话';
+    // 使用函数式更新保存当前对话到历史
+    setChatHistory(prevHistory => {
+      if (messages.length > 1) {
+        const title = messages[1]?.content?.slice(0, 20) || '新对话';
         const now = new Date().toISOString();
 
-        if (latestChatId) {
-          return prev.map(c =>
-            c.id === latestChatId
-              ? { ...c, messages: [...latestMessages], updatedAt: now }
+        if (currentChatId) {
+          // 更新现有对话
+          return prevHistory.map(c =>
+            c.id === currentChatId
+              ? { ...c, messages: [...messages], updatedAt: now }
               : c
           );
         } else {
+          // 创建新的历史记录
           const newChat: ChatHistory = {
             id: `chat_${Date.now()}`,
             title,
-            messages: [...latestMessages],
+            messages: [...messages],
             createdAt: now,
             updatedAt: now
           };
-          return [newChat, ...prev];
+          return [newChat, ...prevHistory];
         }
       }
-      return prev;
+      return prevHistory;
     });
 
     // 创建新的欢迎消息
@@ -502,18 +484,21 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
     setSelectedAgents([]);
     setSelectedMessage(null);
     setShowReasoning(false);
-  }, []);
+  }, [messages, currentChatId]);
 
   // 加载历史对话
   const loadChat = useCallback((chatId: string) => {
-    const chat = chatHistoryRef.current.find(c => c.id === chatId);
-    if (chat) {
-      setMessages(chat.messages);
-      setCurrentChatId(chatId);
-      setChatHistory(prev => prev.map(c =>
-        c.id === chatId ? { ...c, updatedAt: new Date().toISOString() } : c
-      ));
-    }
+    setChatHistory(prevHistory => {
+      const chat = prevHistory.find(c => c.id === chatId);
+      if (chat) {
+        setMessages(chat.messages);
+        setCurrentChatId(chatId);
+        return prevHistory.map(c =>
+          c.id === chatId ? { ...c, updatedAt: new Date().toISOString() } : c
+        );
+      }
+      return prevHistory;
+    });
   }, []);
 
   // 删除历史对话
