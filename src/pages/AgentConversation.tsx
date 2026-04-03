@@ -8,6 +8,7 @@
  * 4. 知识沉淀轻量一键化
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import {
   Send, Upload, Bot, Brain, X, FileSpreadsheet, Database,
   GitBranch, Target, Cpu, Shield, CheckCircle, AlertCircle,
@@ -93,6 +94,15 @@ interface Agent {
   icon: string;
   description: string;
   color: string;
+}
+
+// 对话历史类型
+interface ChatHistory {
+  id: string;
+  title: string;
+  messages: Message[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 // 可用智能体列表
@@ -268,13 +278,43 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
 
+  // 已选择的智能体列表（多选）
+  const [selectedAgents, setSelectedAgents] = useState<Agent[]>([]);
+
+  // 对话历史
+  const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [chatKey, setChatKey] = useState<number>(0); // 用于强制刷新消息列表
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // 使用 ref 存储最新状态，避免闭包问题
+  const messagesRef = useRef(messages);
+  const currentChatIdRef = useRef(currentChatId);
+  const chatHistoryRef = useRef(chatHistory);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    currentChatIdRef.current = currentChatId;
+  }, [currentChatId]);
+
+  useEffect(() => {
+    chatHistoryRef.current = chatHistory;
+  }, [chatHistory]);
+
   // 自动滚动
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // 调试：监听 messages 变化
+  useEffect(() => {
+    console.log('Messages updated:', messages.length, 'messages');
   }, [messages]);
 
   // 发送消息
@@ -405,6 +445,144 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
     setShowAgentSelector(false);
   };
 
+  // 切换智能体选择状态（多选）
+  const toggleAgent = (agent: Agent) => {
+    setSelectedAgents(prev => {
+      const isSelected = prev.some(a => a.id === agent.id);
+      if (isSelected) {
+        return prev.filter(a => a.id !== agent.id);
+      }
+      return [...prev, agent];
+    });
+  };
+
+  // 移除已选择的智能体
+  const removeAgent = (agentId: string) => {
+    setSelectedAgents(prev => prev.filter(a => a.id !== agentId));
+  };
+
+  // 创建新对话
+  const createNewChat = useCallback(() => {
+    console.log('createNewChat called');
+
+    // 使用 flushSync 确保状态立即更新
+    flushSync(() => {
+      // 使用 ref 获取最新状态
+      const latestMessages = messagesRef.current;
+      const latestChatId = currentChatIdRef.current;
+
+      console.log('Latest messages count:', latestMessages.length);
+
+      // 如果有实际消息，保存到历史
+      if (latestMessages.length > 1) {
+        const title = latestMessages[1]?.content?.slice(0, 20) || '新对话';
+        const now = new Date().toISOString();
+
+        if (latestChatId) {
+          // 更新现有对话
+          setChatHistory(prev => prev.map(c =>
+            c.id === latestChatId
+              ? { ...c, messages: [...latestMessages], updatedAt: now }
+              : c
+          ));
+        } else {
+          // 创建新的历史记录
+          const newChat: ChatHistory = {
+            id: `chat_${Date.now()}`,
+            title,
+            messages: [...latestMessages],
+            createdAt: now,
+            updatedAt: now
+          };
+          setChatHistory(prev => [newChat, ...prev]);
+        }
+      }
+
+      // 创建新的欢迎消息
+      const welcomeMsg: Message = {
+        id: `welcome_${Date.now()}`,
+        role: 'assistant',
+        content: `欢迎使用智能推演助手！我可以帮您分析产能、优化排程、检测异常等。\n\n**我可以做什么：**\n• 产能预测 - 基于历史数据预测未来产能\n• 排程优化 - 智能安排生产计划\n• 异常检测 - 发现生产中的异常情况\n• 需求预测 - 预测市场需求趋势\n\n**开始使用：**\n1. 上传您的生产数据文件（CSV/Excel）\n2. 或直接输入您的问题\n3. 我会展示完整的推演逻辑路径`,
+        timestamp: new Date().toISOString(),
+        reasoning: MOCK_REASONING
+      };
+
+      // 强制更新 messages 为新的数组
+      setMessages([welcomeMsg]);
+
+      // 清空其他状态
+      setCurrentChatId(null);
+      setInputText('');
+      setUploadedFiles([]);
+      setSelectedAgents([]);
+      setSelectedMessage(null);
+      setShowReasoning(false);
+
+      // 强制刷新消息列表
+      setChatKey(prev => prev + 1);
+    });
+
+    console.log('New chat created');
+  }, []);
+
+  // 加载历史对话
+  const loadChat = useCallback((chatId: string) => {
+    const chat = chatHistoryRef.current.find(c => c.id === chatId);
+    if (chat) {
+      setMessages(chat.messages);
+      setCurrentChatId(chatId);
+      setChatHistory(prev => prev.map(c =>
+        c.id === chatId ? { ...c, updatedAt: new Date().toISOString() } : c
+      ));
+    }
+  }, []);
+
+  // 删除历史对话
+  const deleteChat = (chatId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setChatHistory(prev => prev.filter(c => c.id !== chatId));
+    if (currentChatId === chatId) {
+      setCurrentChatId(null);
+      // 创建新的欢迎消息
+      const welcomeMsg: Message = {
+        id: `welcome_${Date.now()}`,
+        role: 'assistant',
+        content: `欢迎使用智能推演助手！我可以帮您分析产能、优化排程、检测异常等。\n\n**我可以做什么：**\n• 产能预测 - 基于历史数据预测未来产能\n• 排程优化 - 智能安排生产计划\n• 异常检测 - 发现生产中的异常情况\n• 需求预测 - 预测市场需求趋势\n\n**开始使用：**\n1. 上传您的生产数据文件（CSV/Excel）\n2. 或直接输入您的问题\n3. 我会展示完整的推演逻辑路径`,
+        timestamp: new Date().toISOString(),
+        reasoning: MOCK_REASONING
+      };
+      setMessages([welcomeMsg]);
+    }
+  };
+
+  // 保存当前对话到历史
+  const saveCurrentChat = () => {
+    if (messages.length <= 1) return; // 只有欢迎消息不保存
+
+    const title = messages[1]?.content.slice(0, 20) || '新对话';
+    const now = new Date().toISOString();
+
+    if (currentChatId) {
+      // 更新现有对话
+      setChatHistory(prev => prev.map(c =>
+        c.id === currentChatId
+          ? { ...c, messages: [...messages], updatedAt: now }
+          : c
+      ));
+    } else {
+      // 创建新对话
+      const newChat: ChatHistory = {
+        id: `chat_${Date.now()}`,
+        title,
+        messages: [...messages],
+        createdAt: now,
+        updatedAt: now
+      };
+      setChatHistory(prev => [newChat, ...prev]);
+      setCurrentChatId(newChat.id);
+    }
+  };
+
   // 从@下拉菜单选择项（智能体或文件）
   const selectMentionItem = (item: MentionableItem) => {
     const beforeCursor = inputText.slice(0, cursorPosition);
@@ -465,7 +643,79 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
 
   return (
     <div className="h-screen bg-[#f8fafc] text-[#1e293b] flex text-sm overflow-hidden">
-      {/* 左侧：对话区（70%） */}
+      {/* 左侧：对话管理侧边栏 */}
+      <div className="w-64 border-r border-[#e2e8f0] bg-white flex flex-col">
+        {/* 侧边栏标题 */}
+        <div className="h-12 px-4 border-b border-[#e2e8f0] flex items-center justify-between">
+          <span className="font-medium text-[#1e293b]">对话</span>
+        </div>
+
+        {/* +新对话按钮 */}
+        <div className="p-3" style={{ position: 'relative', zIndex: 10 }}>
+          <button
+            onClick={() => createNewChat()}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '10px 16px',
+              backgroundColor: '#3b82f6',
+              color: '#ffffff',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 500
+            }}
+          >
+            <Plus size={16} />
+            <span>新对话</span>
+          </button>
+        </div>
+
+        {/* 历史对话列表 */}
+        <div className="flex-1 overflow-auto px-3 pb-3">
+          {chatHistory.length === 0 ? (
+            <div className="text-center py-8 text-[#94a3b8] text-xs">
+              暂无历史对话
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {chatHistory.map(chat => (
+                <div
+                  key={chat.id}
+                  onClick={() => loadChat(chat.id)}
+                  className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
+                    currentChatId === chat.id
+                      ? 'bg-[#f1f5f9]'
+                      : 'hover:bg-[#f8fafc]'
+                  }`}
+                >
+                  <Bot size={16} className="text-[#64748b] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-[#1e293b] truncate">
+                      {chat.title}
+                    </div>
+                    <div className="text-[10px] text-[#94a3b8]">
+                      {new Date(chat.updatedAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => deleteChat(chat.id, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#ef4444]/10 rounded text-[#64748b] hover:text-[#ef4444] transition-all"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 中间：对话区 */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* 顶部栏 */}
         <div className="h-12 px-4 border-b border-[#e2e8f0] flex items-center justify-between bg-white shadow-sm">
@@ -541,7 +791,9 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
         </div>
 
         {/* 消息列表 */}
-        <div className="flex-1 overflow-auto p-4 space-y-4">
+        <div key={chatKey} className="flex-1 overflow-auto p-4 space-y-4">
+          {/* 调试信息 */}
+          <div className="text-[10px] text-[#94a3b8] mb-2">Debug: {messages.length} messages, Key: {chatKey}</div>
           {messages.length === 0 ? (
             <EmptyState onUpload={() => fileInputRef.current?.click()} onDemo={loadDemoData} />
           ) : (
@@ -577,6 +829,36 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
                     className="p-1 hover:bg-[#ef4444]/10 rounded text-[#64748b] hover:text-[#ef4444]"
                   >
                     <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 已选择智能体 */}
+          {selectedAgents.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {selectedAgents.map(agent => (
+                <div
+                  key={agent.id}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#e2e8f0]"
+                  style={{ backgroundColor: `${agent.color}15` }}
+                >
+                  <div
+                    className="w-5 h-5 rounded flex items-center justify-center"
+                    style={{ backgroundColor: `${agent.color}30` }}
+                  >
+                    <Bot size={12} style={{ color: agent.color }} />
+                  </div>
+                  <span className="text-xs font-medium" style={{ color: agent.color }}>
+                    {agent.name}
+                  </span>
+                  <button
+                    onClick={() => removeAgent(agent.id)}
+                    className="p-0.5 hover:bg-white/50 rounded transition-colors"
+                    style={{ color: agent.color }}
+                  >
+                    <X size={12} />
                   </button>
                 </div>
               ))}
@@ -694,6 +976,35 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
                 <Send size={18} />
               )}
             </button>
+          </div>
+
+          {/* 智能体选择器 */}
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#e2e8f0]">
+            <span className="text-[10px] text-[#64748b] uppercase font-medium">选择智能体:</span>
+            <div className="flex flex-wrap gap-1.5">
+              {AVAILABLE_AGENTS.map(agent => {
+                const isSelected = selectedAgents.some(a => a.id === agent.id);
+                return (
+                  <button
+                    key={agent.id}
+                    onClick={() => toggleAgent(agent)}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-all ${
+                      isSelected
+                        ? 'ring-1 ring-offset-0'
+                        : 'hover:bg-[#f1f5f9] opacity-60 hover:opacity-100'
+                    }`}
+                    style={{
+                      backgroundColor: isSelected ? `${agent.color}20` : 'transparent',
+                      color: isSelected ? agent.color : '#64748b',
+                      boxShadow: isSelected ? `0 0 0 1px ${agent.color}` : 'none'
+                    }}
+                  >
+                    <Bot size={12} />
+                    <span className="text-[10px]">{agent.name}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

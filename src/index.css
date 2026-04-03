@@ -1110,6 +1110,48 @@ h1, h2, h3, h4, h5, h6 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+}
+
+/* 节点展开按钮 - 右上角 */
+.ontology-node-header-palantir .node-expand-btn {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 4px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+
+.ontology-node-header-palantir .node-expand-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  opacity: 1;
+}
+
+/* 右侧面板关闭按钮 */
+.panel-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 6px;
+  color: #3b82f6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.panel-close-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
 }
 
 .ontology-node-content-palantir {

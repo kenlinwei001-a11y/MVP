@@ -44,6 +44,8 @@ import {
   Maximize2,
   Minimize2,
   Link2,
+  PanelRightOpen,
+  PanelRightClose,
 } from 'lucide-react';
 
 import type { ConstraintAST } from '../types/constraint-ast';
@@ -304,8 +306,23 @@ const nodeTypeLibrary: NodeTypeLibraryItem[] = [
 ];
 
 // ============================================================================
-// 9大域本体实体定义 - 60+核心实体
+// 产销匹配场景本体模型 - 4大业务域 + 11核心实体
+// 以CustomerOrder为中心枢纽，覆盖需求→生产→供应→计划全链路
 // ============================================================================
+
+// 实体类型定义
+type EntityType = 'Object_Type' | 'Relation_Type' | 'Attribute_Type';
+type EntityStatus = 'active' | 'draft' | 'deprecated';
+
+// 扩展实体属性接口
+interface EntityProperty {
+  key: string;
+  value?: string | number | boolean;
+  unit?: string;
+  type?: 'string' | 'number' | 'boolean' | 'date' | 'enum' | 'reference';
+  description?: string;
+  required?: boolean;
+}
 
 const createEntity = (
   id: string,
@@ -314,13 +331,13 @@ const createEntity = (
   domainName: string,
   icon: string,
   description: string,
-  properties: Array<{ key: string; value: any; unit?: string; type?: string }>,
+  properties: EntityProperty[],
   extra: Partial<OntologyEntity> = {}
 ): OntologyEntity => ({
   id,
   displayName,
-  type: 'Object_Type',
-  status: 'active',
+  type: 'Object_Type' as EntityType,
+  status: 'active' as EntityStatus,
   icon,
   description,
   properties,
@@ -328,7 +345,7 @@ const createEntity = (
   domainName,
   version: '1.0.0',
   namespace: `${domain}.${id}`,
-  tags: [domainName],
+  tags: [domainName, '产销匹配'],
   created_at: '2024-01-15T10:00:00Z',
   updated_at: '2024-03-20T14:30:00Z',
   created_by: '系统管理员',
@@ -336,267 +353,352 @@ const createEntity = (
   ...extra,
 });
 
-// ===== 1. 组织资源域 (Organization) =====
+// ===== 1. 需求域 (Demand) - 谁要什么、要多少、什么时候要 =====
+const demandEntities: OntologyEntity[] = [
+  // 1.1 Customer（客户）- 需求发起方
+  createEntity('customer', '客户', 'demand', '需求域', 'activity', '客户实体，包含战略等级、合同条款等', [
+    { key: 'customer_id', value: 'CUST-001', type: 'string', description: '客户唯一标识' },
+    { key: 'customer_name', value: '特斯拉中国', type: 'string', description: '客户名称' },
+    { key: 'priority_level', value: 'VIP', type: 'enum', description: '战略等级：VIP/Key/Standard/Trial' },
+    { key: 'credit_limit', value: 100000000, unit: '元', type: 'number', description: '信用额度' },
+    { key: 'penalty_threshold_days', value: 3, unit: '天', type: 'number', description: '延误超过N天触发罚款' },
+    { key: 'penalty_rate', value: 5, unit: '%', type: 'number', description: '罚款比率（占订单金额%）' },
+    { key: 'max_penalty_cap', value: 500000, unit: '元', type: 'number', description: '最高罚款上限' },
+    { key: 'delivery_reliability', value: 0.95, type: 'number', description: '历史交期履约率（0-1）' },
+    { key: 'complaint_sensitivity', value: 'High', type: 'enum', description: '投诉敏感度：High/Medium/Low' },
+    { key: 'account_manager', value: '张经理', type: 'string', description: '客户经理' },
+  ], {
+    metadata: {
+      ai_reasoning_hints: [
+        'priority_level影响多订单冲突时的优先级排序',
+        'penalty_threshold_days让AI知道延误几天会触发实质性经济损失',
+        'delivery_reliability是评估客户容忍度的历史依据'
+      ]
+    }
+  }),
+
+  // 1.2 CustomerOrder（客户订单）- 中心枢纽
+  createEntity('customer_order', '客户订单', 'demand', '需求域', 'file-code', '客户订单，产销匹配场景的中心枢纽实体', [
+    { key: 'order_id', value: 'SO-2024-001', type: 'string', description: '订单唯一标识（SAP SO号）' },
+    { key: 'customer_ref', value: 'CUST-001', type: 'reference', description: '关联客户' },
+    { key: 'item_ref', value: 'ITEM-LFP-280', type: 'reference', description: '关联成品物料' },
+    { key: 'quantity', value: 10000, unit: 'PCS', type: 'number', description: '需求数量' },
+    { key: 'unit', value: 'PCS', type: 'string', description: '单位（PCS/KG/SET）' },
+    { key: 'requested_date', value: '2024-04-15', type: 'date', description: '客户要求交期' },
+    { key: 'committed_date', value: '2024-04-12', type: 'date', description: '系统承诺交期' },
+    { key: 'order_priority', value: 1, type: 'number', description: '当前排程优先级（1最高）' },
+    { key: 'order_type', value: 'Standard', type: 'enum', description: '订单类型：Standard/Rush/Frame/Sample' },
+    { key: 'special_requirements', value: '分批交付,包装要求A', type: 'string', description: '特殊要求' },
+    { key: 'status', value: '已确认', type: 'enum', description: '状态：新建/已确认/生产中/完工/发货/关闭/暂挂/取消' },
+    { key: 'created_at', value: '2024-03-01T10:00:00Z', type: 'date', description: '下单时间' },
+  ], {
+    metadata: {
+      is_hub_entity: true,
+      status_machine: '[新建]→[已确认]→[生产中]→[完工]→[发货]→[关闭]',
+      relationships: [
+        { type: 'places', target: 'customer', desc: '客户下达订单' },
+        { type: 'orders', target: 'finished_item', desc: '订单指定产品' },
+        { type: 'triggers', target: 'production_order', desc: '订单触发生产' },
+        { type: 'generates', target: 'atp_commitment', desc: '订单生成承诺' }
+      ]
+    }
+  }),
+
+  // 1.3 FinishedItem（成品物料）- 需求对象
+  createEntity('finished_item', '成品物料', 'demand', '需求域', 'battery', '成品物料主数据，含BOM和工艺路线关联', [
+    { key: 'item_id', value: 'ITEM-LFP-280', type: 'string', description: '物料号' },
+    { key: 'item_description', value: '磷酸铁锂280Ah储能电芯', type: 'string', description: '物料描述' },
+    { key: 'item_category', value: 'MTO', type: 'enum', description: '物料类别：MTS/MTO/ATO' },
+    { key: 'safety_stock', value: 5000, unit: 'PCS', type: 'number', description: '安全库存水位' },
+    { key: 'min_order_quantity', value: 1000, unit: 'PCS', type: 'number', description: '最小生产批量' },
+    { key: 'lot_size_rule', value: 'EconomicOrderQty', type: 'enum', description: '批量规则：Fixed/EOQ/Multiples' },
+    { key: 'shelf_life_days', value: 365, unit: '天', type: 'number', description: '保质期（天）' },
+    { key: 'nominal_capacity', value: 280, unit: 'Ah', type: 'number', description: '额定容量' },
+    { key: 'nominal_voltage', value: 3.2, unit: 'V', type: 'number', description: '额定电压' },
+    { key: 'energy_density', value: 170, unit: 'Wh/kg', type: 'number', description: '能量密度' },
+    { key: 'cycle_life', value: 8000, unit: '次', type: 'number', description: '循环寿命' },
+    { key: 'abc_classification', value: 'A', type: 'enum', description: 'ABC分类：A/B/C' },
+  ], {
+    metadata: {
+      ai_reasoning_hints: [
+        'item_category对ATP推理至关重要：MTS可查库存，MTO需触发生产，ATO关注装配产能',
+        'shelf_life_days用于保质期约束检查'
+      ],
+      relationships: [
+        { type: 'defined_by', target: 'bom_level', desc: '成品由BOM层级定义' }
+      ]
+    }
+  }),
+];
+
+// ===== 2. 生产域 (Production) - 用什么资源、怎么生产、当前状态 =====
+const productionEntities: OntologyEntity[] = [
+  // 2.1 WorkCenter（工作中心）- 产能资源载体
+  createEntity('work_center', '工作中心', 'production', '生产域', 'cpu', '工作中心，产能约束的核心载体', [
+    { key: 'wc_id', value: 'WC-SMT-001', type: 'string', description: '工作中心标识' },
+    { key: 'wc_name', value: 'SMT贴片线3号', type: 'string', description: '工作中心名称' },
+    { key: 'wc_type', value: 'Machine', type: 'enum', description: '类型：Machine/Labor/Mixed' },
+    { key: 'plant_id', value: 'BASE-CZ', type: 'string', description: '所属工厂' },
+    { key: 'standard_capacity', value: 1000, unit: '件/小时', type: 'number', description: '标准产能' },
+    { key: 'efficiency_factor', value: 0.85, type: 'number', description: '实际效率系数（0.6-1.0）' },
+    { key: 'overtime_capacity', value: 1200, unit: '件/小时', type: 'number', description: '加班最大产能' },
+    { key: 'overtime_cost_rate', value: 150, unit: '元/小时', type: 'number', description: '加班单位成本' },
+    { key: 'bottleneck_flag', value: true, type: 'boolean', description: '是否为系统瓶颈' },
+    { key: 'utilization_target', value: 85, unit: '%', type: 'number', description: '目标利用率' },
+    { key: 'current_load', value: 820, unit: '件/小时', type: 'number', description: '当前负荷' },
+    { key: 'setup_matrix_json', value: '{"A-B":4,"B-A":1}', type: 'string', description: '换模时间矩阵JSON' },
+  ], {
+    metadata: {
+      ai_reasoning_hints: [
+        'efficiency_factor通常取0.75-0.85（含换模、等待损耗），非理论1.0',
+        'setup_matrix是非对称约束，从产品A到B可能需要4小时，B到A只需1小时',
+        'bottleneck_flag标识的资源是ATP推理重点关注对象'
+      ],
+      behavior_rules: [
+        'daily_available_capacity = SUM(shift.duration) × standard_capacity × efficiency_factor'
+      ]
+    }
+  }),
+
+  // 2.2 ProductionOrder（生产工单）- 生产执行单元
+  createEntity('production_order', '生产工单', 'production', '生产域', 'file-code', '生产工单，捕捉计划与实际的偏差', [
+    { key: 'wo_id', value: 'WO-2024-001', type: 'string', description: '工单号（SAP PP订单号）' },
+    { key: 'order_ref', value: 'SO-2024-001', type: 'reference', description: '关联来源订单' },
+    { key: 'item_ref', value: 'ITEM-LFP-280', type: 'reference', description: '生产物料' },
+    { key: 'planned_quantity', value: 10000, unit: 'PCS', type: 'number', description: '计划数量' },
+    { key: 'confirmed_quantity', value: 8500, unit: 'PCS', type: 'number', description: '已完工数量' },
+    { key: 'scrap_quantity', value: 150, unit: 'PCS', type: 'number', description: '报废数量' },
+    { key: 'planned_start', value: '2024-03-15T08:00:00Z', type: 'date', description: '计划开工时间' },
+    { key: 'planned_end', value: '2024-04-12T18:00:00Z', type: 'date', description: '计划完工时间' },
+    { key: 'actual_start', value: '2024-03-15T09:30:00Z', type: 'date', description: '实际开工时间' },
+    { key: 'actual_end', value: '', type: 'date', description: '实际完工时间' },
+    { key: 'forecast_end', value: '2024-04-13T12:00:00Z', type: 'date', description: 'AI预测完工时间' },
+    { key: 'priority', value: 1, type: 'number', description: '排程优先级' },
+    { key: 'status', value: '生产中', type: 'enum', description: '工单状态' },
+    { key: 'delay_risk_score', value: 0.35, type: 'number', description: '延误风险评分（0-1）' },
+  ], {
+    metadata: {
+      ai_reasoning_hints: [
+        'forecast_end与planned_end的差值是ATP置信度计算的核心输入',
+        '当差值为负（预计提前），置信度提升；差值为正（预计延误），置信度下降'
+      ],
+      relationships: [
+        { type: 'contains', target: 'operation', desc: '工单包含工序' }
+      ]
+    }
+  }),
+
+  // 2.3 Operation（工序）- 最小生产单元
+  createEntity('operation', '工序', 'production', '生产域', 'activity', '工序，支持关键路径计算', [
+    { key: 'op_id', value: 'OP-001', type: 'string', description: '工序标识' },
+    { key: 'op_sequence', value: 10, type: 'number', description: '工序序号（10,20,30...）' },
+    { key: 'op_description', value: '正极搅拌', type: 'string', description: '工序描述' },
+    { key: 'wo_ref', value: 'WO-2024-001', type: 'reference', description: '所属工单' },
+    { key: 'wc_ref', value: 'WC-SMT-001', type: 'reference', description: '执行工作中心' },
+    { key: 'setup_time', value: 2, unit: '小时', type: 'number', description: '准备时间' },
+    { key: 'processing_time', value: 0.5, unit: '小时/件', type: 'number', description: '加工时间' },
+    { key: 'queue_time', value: 1, unit: '小时', type: 'number', description: '等待时间' },
+    { key: 'move_time', value: 0.5, unit: '小时', type: 'number', description: '转移时间' },
+    { key: 'total_lead_time', value: 4, unit: '小时', type: 'number', description: '总提前期' },
+    { key: 'actual_setup_time', value: 2.5, unit: '小时', type: 'number', description: '实际准备时间' },
+    { key: 'actual_processing_time', value: 0.6, unit: '小时/件', type: 'number', description: '实际加工时间' },
+    { key: 'parallel_flag', value: false, type: 'boolean', description: '是否可与前序并行' },
+    { key: 'status', value: 'InProgress', type: 'enum', description: '状态：Planned/InProgress/Completed/Skipped' },
+    { key: 'completion_percentage', value: 65, unit: '%', type: 'number', description: '完成百分比' },
+    { key: 'quality_hold_flag', value: false, type: 'boolean', description: '是否因质量问题暂停' },
+  ], {
+    metadata: {
+      ai_reasoning_hints: [
+        'predecessor_ops定义了工序间的依赖关系（有向无环图）',
+        'AI重点关注关键路径上的工序产能'
+      ],
+      relationships: [
+        { type: 'executed_at', target: 'work_center', desc: '工序在工作中心执行' },
+        { type: 'precedes', target: 'operation', desc: '工序先后依赖关系' }
+      ]
+    }
+  }),
+];
+
+// ===== 3. 供应域 (Supply) - 物料从哪来、有多少、能用多少 =====
+const supplyEntities: OntologyEntity[] = [
+  // 3.1 Inventory（库存）- 四维数量模型
+  createEntity('inventory', '库存', 'supply', '供应域', 'box', '库存，四维数量模型支持精确ATP计算', [
+    { key: 'inventory_id', value: 'INV-001', type: 'string', description: '库存记录标识' },
+    { key: 'item_ref', value: 'ITEM-LFP-280', type: 'reference', description: '关联物料' },
+    { key: 'plant_id', value: 'BASE-CZ', type: 'string', description: '所在工厂' },
+    { key: 'storage_location', value: 'WH-001-A01', type: 'string', description: '库位' },
+    { key: 'on_hand_qty', value: 5000, unit: 'PCS', type: 'number', description: '现货库存（实际在库）' },
+    { key: 'in_transit_qty', value: 3000, unit: 'PCS', type: 'number', description: '在途数量' },
+    { key: 'reserved_qty', value: 2000, unit: 'PCS', type: 'number', description: '已预留数量' },
+    { key: 'available_qty', value: 6000, unit: 'PCS', type: 'number', description: '可用数量=现货+在途-预留' },
+    { key: 'expected_arrival_date', value: '2024-03-25', type: 'date', description: '在途预计到货日' },
+    { key: 'reorder_point', value: 3000, unit: 'PCS', type: 'number', description: '再订货点' },
+    { key: 'last_updated', value: '2024-03-20T14:30:00Z', type: 'date', description: '最后更新时间' },
+  ], {
+    metadata: {
+      ai_reasoning_hints: [
+        'AI评估ATP时必须使用available_qty，而非on_hand_qty',
+        'in_transit_details支持未来库存可用性推理',
+        'data_source标注数据时效性，AI应提示数据更新时间'
+      ],
+      behavior_rules: [
+        'available_qty = on_hand_qty + in_transit_qty - reserved_qty',
+        '在途物料仅在expected_arrival_date <= committed_date时计入可用'
+      ]
+    }
+  }),
+
+  // 3.2 BOMLevel（BOM层级）- 替代料支持
+  createEntity('bom_level', 'BOM层级', 'supply', '供应域', 'layers', 'BOM层级，支持替代料推理', [
+    { key: 'bom_id', value: 'BOM-LFP-001', type: 'string', description: 'BOM记录标识' },
+    { key: 'bom_version', value: 'V2.1', type: 'string', description: 'BOM版本号' },
+    { key: 'parent_item', value: 'ITEM-LFP-280', type: 'reference', description: '父项物料' },
+    { key: 'child_item', value: 'MAT-CATH-001', type: 'reference', description: '子项物料' },
+    { key: 'level', value: 1, type: 'number', description: 'BOM层级（0=成品，1=组件，2=原材料）' },
+    { key: 'quantity_per', value: 1.05, unit: 'PCS', type: 'number', description: '单位父项需用量' },
+    { key: 'scrap_factor', value: 1.05, type: 'number', description: '损耗系数（1.05=5%损耗）' },
+    { key: 'effective_from', value: '2024-01-01', type: 'date', description: '生效日期' },
+    { key: 'effective_to', value: '2099-12-31', type: 'date', description: '失效日期' },
+    { key: 'alternative_item', value: 'MAT-CATH-ALT', type: 'reference', description: '替代料' },
+    { key: 'substitution_ratio', value: 1.0, type: 'number', description: '替代比例' },
+    { key: 'alt_approval_status', value: 'Approved', type: 'enum', description: '替代批准状态' },
+    { key: 'phantom_flag', value: false, type: 'boolean', description: '是否虚拟件' },
+    { key: 'purchase_or_make', value: 'Buy', type: 'enum', description: '自制/外购：Make/Buy/Either' },
+  ], {
+    metadata: {
+      ai_reasoning_hints: [
+        'alternative_items让AI可以在主料缺货时推荐替代料',
+        'phantom_flag=true时展开跳过，不产生工单'
+      ],
+      relationships: [
+        { type: 'sourced_from', target: 'supplier', desc: '物料从供应商采购' }
+      ]
+    }
+  }),
+
+  // 3.3 Supplier（供应商）- 供应风险推理
+  createEntity('supplier', '供应商', 'supply', '供应域', 'truck', '供应商，支持供应风险推理', [
+    { key: 'supplier_id', value: 'SUP-001', type: 'string', description: '供应商标识' },
+    { key: 'supplier_name', value: '材料科技集团', type: 'string', description: '供应商名称' },
+    { key: 'supplier_tier', value: 'Tier1', type: 'enum', description: '供应商层级：Tier1/Tier2/Approved/Backup' },
+    { key: 'standard_lt', value: 15, unit: '天', type: 'number', description: '标准提前期' },
+    { key: 'rush_lt', value: 7, unit: '天', type: 'number', description: '紧急提前期' },
+    { key: 'lt_variability', value: 0.2, type: 'number', description: '提前期变异系数' },
+    { key: 'moq', value: 1000, unit: 'PCS', type: 'number', description: '最小订购量' },
+    { key: 'capacity_limit', value: 10000, unit: 'PCS/月', type: 'number', description: '供应商产能上限' },
+    { key: 'on_time_rate', value: 0.92, type: 'number', description: '准时交货率' },
+    { key: 'quality_pass_rate', value: 0.98, type: 'number', description: '来料合格率' },
+    { key: 'average_delay_days', value: 2, unit: '天', type: 'number', description: '平均延误天数' },
+    { key: 'geo_risk_level', value: 'Low', type: 'enum', description: '地缘风险：Low/Medium/High' },
+    { key: 'single_source_flag', value: false, type: 'boolean', description: '是否唯一供应商' },
+  ], {
+    metadata: {
+      ai_reasoning_hints: [
+        'single_source_flag=true且on_time_rate<0.85时，AI应建议增加缓冲',
+        'lt_variability越大，安全库存应越高'
+      ],
+      relationships: [
+        { type: 'replenishes', target: 'inventory', desc: '供应商补充库存' }
+      ]
+    }
+  }),
+];
+
+// ===== 4. 计划域 (Planning) - 什么时候做完、怎么做最优 =====
+const planningEntities: OntologyEntity[] = [
+  // 4.1 Routing（工艺路线）- 替代路线选择
+  createEntity('routing', '工艺路线', 'planning', '计划域', 'git-branch', '工艺路线，支持替代路线选择', [
+    { key: 'routing_id', value: 'ROUTE-LFP-001', type: 'string', description: '工艺路线标识' },
+    { key: 'routing_version', value: 'V3.2', type: 'string', description: '版本号' },
+    { key: 'item_ref', value: 'ITEM-LFP-280', type: 'reference', description: '适用物料' },
+    { key: 'routing_type', value: 'Standard', type: 'enum', description: '路线类型：Standard/Alternative/Rework' },
+    { key: 'total_lead_time', value: 480, unit: '小时', type: 'number', description: '总理论提前期' },
+    { key: 'bottleneck_wc', value: 'WC-SMT-001', type: 'reference', description: '当前识别的瓶颈工作中心' },
+    { key: 'min_batch_size', value: 1000, unit: 'PCS', type: 'number', description: '最小经济批量' },
+    { key: 'max_batch_size', value: 10000, unit: 'PCS', type: 'number', description: '最大批量' },
+    { key: 'yield_target', value: 98.5, unit: '%', type: 'number', description: '良品率目标' },
+  ], {
+    metadata: {
+      ai_reasoning_hints: [
+        '当主路线关键工序产能紧张时，AI可评估替代路线可行性',
+        'alternative_routings可绕开瓶颈，但可能增加工时'
+      ],
+      relationships: [
+        { type: 'governed_by', target: 'customer_order', desc: '订单遵循工艺路线' }
+      ]
+    }
+  }),
+
+  // 4.2 ATPCommitment（交期承诺）- 独立实体设计
+  createEntity('atp_commitment', '交期承诺', 'planning', '计划域', 'check-circle', '交期承诺，独立实体支持历史追溯和反馈学习', [
+    { key: 'commitment_id', value: 'ATP-2024-001', type: 'string', description: '承诺唯一标识' },
+    { key: 'order_ref', value: 'SO-2024-001', type: 'reference', description: '关联订单' },
+    { key: 'commitment_version', value: 1, type: 'number', description: '承诺版本' },
+    { key: 'committed_date', value: '2024-04-12', type: 'date', description: '承诺交期' },
+    { key: 'commitment_type', value: 'Standard', type: 'enum', description: '承诺类型：Standard/Overtime/PrioritySwap/PartialDelivery/AlternativeRouting' },
+    { key: 'confidence_score', value: 85, unit: '%', type: 'number', description: '置信度（0-100）' },
+    { key: 'risk_level', value: 'Low', type: 'enum', description: '风险等级：High/Medium/Low' },
+    { key: 'reason_chain', value: '产能充足,物料齐套', type: 'string', description: '推理原因链' },
+    { key: 'cost_impact', value: 0, unit: '元', type: 'number', description: '额外成本' },
+    { key: 'created_by', value: 'AI_AUTO', type: 'enum', description: '承诺来源：AI_AUTO/HUMAN_CONFIRMED/HUMAN_OVERRIDE' },
+    { key: 'created_at', value: '2024-03-01T10:00:00Z', type: 'date', description: '承诺时间' },
+    { key: 'actual_delivery_date', value: '', type: 'date', description: '实际交货日期' },
+    { key: 'deviation_days', value: 0, unit: '天', type: 'number', description: '实际偏差天数（负=提前）' },
+  ], {
+    metadata: {
+      is_key_entity: true,
+      ai_reasoning_hints: [
+        'commitment_version支持同一订单多次承诺的历史追溯',
+        'actual_delivery_date和deviation_days是ML模型训练数据来源',
+        '通过分析commitment_type分布可发现模式规律'
+      ],
+      relationships: [
+        { type: 'generates', target: 'customer_order', desc: '订单生成承诺记录' }
+      ]
+    }
+  }),
+];
+
+// ===== 保留的原有域定义（向后兼容）=====
+// 组织资源域（简化为支撑域）
 const orgEntities: OntologyEntity[] = [
   createEntity('company', '集团公司', 'org', '组织资源域', 'building', '集团总部', [
     { key: 'company_code', value: 'CALB', type: 'string' },
     { key: 'company_name', value: '中创新航', type: 'string' },
-    { key: 'established', value: '2007', type: 'string' },
-  ], { metadata: { employees: 15000, bases: 6 } }),
-
-  // 中创新航六大基地
+  ]),
   createEntity('base_cz', '常州基地', 'org', '组织资源域', 'building', '总部制造基地', [
     { key: 'base_code', value: 'BASE-CZ', type: 'string' },
     { key: 'location', value: '江苏常州', type: 'string' },
-    { key: 'total_area', value: 1200000, unit: '㎡', type: 'number' },
     { key: 'total_capacity', value: 70, unit: 'GWh/年', type: 'number' },
-    { key: 'employee_count', value: 5000, unit: '人', type: 'number' },
-    { key: 'utilization_rate', value: 88, unit: '%', type: 'number' },
-  ], {
-    metadata: { base_type: '总部基地', planning_capacity_2025: '100GWh', products: 'LFP, NCM' }
-  }),
-
+  ]),
   createEntity('base_xm', '厦门基地', 'org', '组织资源域', 'building', '厦门制造基地', [
     { key: 'base_code', value: 'BASE-XM', type: 'string' },
     { key: 'location', value: '福建厦门', type: 'string' },
-    { key: 'total_area', value: 800000, unit: '㎡', type: 'number' },
     { key: 'total_capacity', value: 50, unit: 'GWh/年', type: 'number' },
-    { key: 'employee_count', value: 3000, unit: '人', type: 'number' },
-    { key: 'utilization_rate', value: 82, unit: '%', type: 'number' },
-  ], {
-    metadata: { base_type: '区域基地', planning_capacity_2025: '80GWh', products: 'LFP' }
-  }),
-
-  createEntity('base_lz', '柳州基地', 'org', '组织资源域', 'building', '柳州制造基地', [
-    { key: 'base_code', value: 'BASE-LZ', type: 'string' },
-    { key: 'location', value: '广西柳州', type: 'string' },
-    { key: 'total_area', value: 600000, unit: '㎡', type: 'number' },
-    { key: 'total_capacity', value: 35, unit: 'GWh/年', type: 'number' },
-    { key: 'employee_count', value: 2000, unit: '人', type: 'number' },
-    { key: 'utilization_rate', value: 75, unit: '%', type: 'number' },
-  ], {
-    metadata: { base_type: '区域基地', planning_capacity_2025: '50GWh', products: 'LFP' }
-  }),
-
-  createEntity('base_yc', '盐城基地', 'org', '组织资源域', 'building', '盐城制造基地', [
-    { key: 'base_code', value: 'BASE-YC', type: 'string' },
-    { key: 'location', value: '江苏盐城', type: 'string' },
-    { key: 'total_area', value: 1000000, unit: '㎡', type: 'number' },
-    { key: 'total_capacity', value: 60, unit: 'GWh/年', type: 'number' },
-    { key: 'employee_count', value: 3500, unit: '人', type: 'number' },
-    { key: 'utilization_rate', value: 80, unit: '%', type: 'number' },
-  ], {
-    metadata: { base_type: '区域基地', planning_capacity_2025: '90GWh', products: 'LFP, NCM' }
-  }),
-
-  createEntity('base_cd', '成都基地', 'org', '组织资源域', 'building', '成都制造基地', [
-    { key: 'base_code', value: 'BASE-CD', type: 'string' },
-    { key: 'location', value: '四川成都', type: 'string' },
-    { key: 'total_area', value: 700000, unit: '㎡', type: 'number' },
-    { key: 'total_capacity', value: 40, unit: 'GWh/年', type: 'number' },
-    { key: 'employee_count', value: 2500, unit: '人', type: 'number' },
-    { key: 'utilization_rate', value: 78, unit: '%', type: 'number' },
-  ], {
-    metadata: { base_type: '区域基地', planning_capacity_2025: '60GWh', products: 'LFP' }
-  }),
-
-  createEntity('base_wh', '武汉基地', 'org', '组织资源域', 'building', '武汉制造基地', [
-    { key: 'base_code', value: 'BASE-WH', type: 'string' },
-    { key: 'location', value: '湖北武汉', type: 'string' },
-    { key: 'total_area', value: 900000, unit: '㎡', type: 'number' },
-    { key: 'total_capacity', value: 55, unit: 'GWh/年', type: 'number' },
-    { key: 'employee_count', value: 3200, unit: '人', type: 'number' },
-    { key: 'utilization_rate', value: 85, unit: '%', type: 'number' },
-  ], {
-    metadata: { base_type: '区域基地', planning_capacity_2025: '80GWh', products: 'LFP, NCM' }
-  }),
-
-  createEntity('factory_a', '极片工厂', 'org', '组织资源域', 'factory', '前段极片制造工厂', [
-    { key: 'factory_code', value: 'FAC-A', type: 'string' },
-    { key: 'factory_type', value: '极片工厂', type: 'string' },
-    { key: 'process_segment', value: '前段', type: 'string' },
-    { key: 'annual_capacity', value: 120, unit: 'GWh', type: 'number' },
-    { key: 'workshop_count', value: 4, unit: '个', type: 'number' },
-    { key: 'line_count', value: 32, unit: '条', type: 'number' },
-  ], { parent_id: 'base_cz', dependencies: ['base_cz'], base_id: 'base_cz' }),
-
-  createEntity('factory_b', '电芯工厂', 'org', '组织资源域', 'factory', '中段电芯组装工厂', [
-    { key: 'factory_code', value: 'FAC-B', type: 'string' },
-    { key: 'factory_type', value: '电芯工厂', type: 'string' },
-    { key: 'process_segment', value: '中段', type: 'string' },
-    { key: 'annual_capacity', value: 150, unit: 'GWh', type: 'number' },
-    { key: 'workshop_count', value: 6, unit: '个', type: 'number' },
-    { key: 'line_count', value: 48, unit: '条', type: 'number' },
-  ], { parent_id: 'base_cz', dependencies: ['base_cz', 'factory_a'], base_id: 'base_cz' }),
-
-  createEntity('factory_c', '模组PACK工厂', 'org', '组织资源域', 'factory', '后段模组PACK工厂', [
-    { key: 'factory_code', value: 'FAC-C', type: 'string' },
-    { key: 'factory_type', value: '模组PACK工厂', type: 'string' },
-    { key: 'process_segment', value: '后段', type: 'string' },
-    { key: 'annual_capacity', value: 100, unit: 'GWh', type: 'number' },
-    { key: 'workshop_count', value: 3, unit: '个', type: 'number' },
-    { key: 'line_count', value: 24, unit: '条', type: 'number' },
-  ], { parent_id: 'base_cz', dependencies: ['base_cz', 'factory_b'], base_id: 'base_cz' }),
-
-  createEntity('workshop_front', '前段车间', 'org', '组织资源域', 'layers', '极片制造车间', [
-    { key: 'workshop_code', value: 'WS-FRONT-01', type: 'string' },
-    { key: 'workshop_type', value: '前段车间', type: 'string' },
-    { key: 'area', value: 25000, unit: '㎡', type: 'number' },
-    { key: 'cleanliness', value: '十万级', type: 'string' },
-    { key: 'line_count', value: 8, unit: '条', type: 'number' },
-  ], { parent_id: 'factory_a', base_id: 'base_cz' }),
-
-  createEntity('workshop_middle', '中段车间', 'org', '组织资源域', 'layers', '电芯组装车间', [
-    { key: 'workshop_code', value: 'WS-MID-01', type: 'string' },
-    { key: 'workshop_type', value: '中段车间', type: 'string' },
-    { key: 'area', value: 35000, unit: '㎡', type: 'number' },
-    { key: 'cleanliness', value: '万级', type: 'string' },
-    { key: 'line_count', value: 8, unit: '条', type: 'number' },
-  ], { parent_id: 'factory_b', base_id: 'base_cz' }),
-
-  createEntity('workshop_back', '后段车间', 'org', '组织资源域', 'layers', '化成PACK车间', [
-    { key: 'workshop_code', value: 'WS-BACK-01', type: 'string' },
-    { key: 'workshop_type', value: '后段车间', type: 'string' },
-    { key: 'area', value: 20000, unit: '㎡', type: 'number' },
-    { key: 'line_count', value: 8, unit: '条', type: 'number' },
-  ], { parent_id: 'factory_c', base_id: 'base_cz' }),
-
-  createEntity('employee', '员工', 'org', '组织资源域', 'activity', '企业员工', [
-    { key: 'employee_code', value: 'EMP001', type: 'string' },
-    { key: 'name', value: '张三', type: 'string' },
-    { key: 'department', value: '前段车间', type: 'string' },
-    { key: 'skill_level', value: '高级', type: 'string' },
-  ]),
-
-  createEntity('work_team', '生产班组', 'org', '组织资源域', 'activity', '生产作业班组', [
-    { key: 'team_code', value: 'TEAM-A01', type: 'string' },
-    { key: 'team_name', value: '前段一班组', type: 'string' },
-    { key: 'member_count', value: 12, unit: '人', type: 'number' },
-    { key: 'shift', value: '白班', type: 'string' },
-  ]),
-
-  createEntity('shift', '班次', 'org', '组织资源域', 'activity', '生产班次定义', [
-    { key: 'shift_code', value: 'DAY', type: 'string' },
-    { key: 'shift_name', value: '白班', type: 'string' },
-    { key: 'start_time', value: '08:00', type: 'string' },
-    { key: 'end_time', value: '20:00', type: 'string' },
-    { key: 'effective_hours', value: 11, unit: '小时', type: 'number' },
   ]),
 ];
 
-// ===== 2. 产能设备域 (Capacity) =====
+// 产能设备域（简化为支撑域）
 const capEntities: OntologyEntity[] = [
   createEntity('production_line', '生产线', 'cap', '产能设备域', 'cpu', '制造产线', [
     { key: 'line_code', value: 'L-A01-001', type: 'string' },
-    { key: 'line_type', value: '涂布线', type: 'string' },
-    { key: 'status', value: '运行中', type: 'string' },
-    { key: 'max_capacity', value: 102, unit: 'k片/天', type: 'number' },
-    { key: 'rated_speed', value: 60, unit: 'm/min', type: 'number' },
     { key: 'oee_target', value: 85, unit: '%', type: 'number' },
-    { key: 'current_oee', value: 82, unit: '%', type: 'number' },
-  ], { parent_id: 'workshop_front' }),
-
-  createEntity('workstation', '工位', 'cap', '产能设备域', 'activity', '具体作业工位', [
-    { key: 'station_code', value: 'WS-001', type: 'string' },
-    { key: 'station_name', value: '涂布工位', type: 'string' },
-    { key: 'cycle_time', value: 45, unit: '秒', type: 'number' },
-    { key: 'automation_level', value: '全自动', type: 'string' },
-    { key: 'operator_count', value: 2, unit: '人', type: 'number' },
-  ], { parent_id: 'production_line' }),
-
-  createEntity('equipment', '关键设备', 'cap', '产能设备域', 'cpu', '生产设备', [
-    { key: 'equipment_code', value: 'EQ-TB-001', type: 'string' },
-    { key: 'equipment_name', value: '涂布机-001', type: 'string' },
-    { key: 'equipment_type', value: '涂布机', type: 'string' },
-    { key: 'manufacturer', value: '先导智能', type: 'string' },
-    { key: 'max_speed', value: 80, unit: 'm/min', type: 'number' },
-    { key: 'availability', value: 95, unit: '%', type: 'number' },
-    { key: 'mtbf', value: 720, unit: '小时', type: 'number' },
-  ], { parent_id: 'workstation' }),
-
-  createEntity('mold', '模具', 'cap', '产能设备域', 'box', '生产模具', [
-    { key: 'mold_code', value: 'MOLD-001', type: 'string' },
-    { key: 'mold_type', value: '极片模', type: 'string' },
-    { key: 'max_shots', value: 1000000, unit: '次', type: 'number' },
-    { key: 'current_shots', value: 500000, unit: '次', type: 'number' },
-    { key: 'status', value: '在用', type: 'string' },
   ]),
 ];
 
-// ===== 3. 产品工艺域 (Product) =====
+// 产品工艺域（简化为支撑域）
 const prodEntities: OntologyEntity[] = [
-  createEntity('product_family', '产品系列', 'prod', '产品工艺域', 'layers', '产品族', [
-    { key: 'family_code', value: 'LFP-ESS', type: 'string' },
-    { key: 'family_name', value: '磷酸铁锂储能系列', type: 'string' },
-    { key: 'application', value: '储能', type: 'string' },
-    { key: 'cell_type', value: '方形铝壳', type: 'string' },
-  ]),
-
   createEntity('product_model_lfp', 'LFP-280Ah', 'prod', '产品工艺域', 'battery', '储能电芯型号', [
     { key: 'model_code', value: 'LFP-280Ah', type: 'string' },
     { key: 'nominal_capacity', value: 280, unit: 'Ah', type: 'number' },
-    { key: 'nominal_voltage', value: 3.2, unit: 'V', type: 'number' },
-    { key: 'energy_density', value: 170, unit: 'Wh/kg', type: 'number' },
-    { key: 'cycle_life', value: 8000, unit: '次', type: 'number' },
-    { key: 'production_lead_time', value: 14, unit: '天', type: 'number' },
-  ], { metadata: { application: '储能系统', certifications: 'UN38.3,IEC62619' } }),
-
-  createEntity('product_model_ncm', 'NCM-150Ah', 'prod', '产品工艺域', 'battery', '动力电芯型号', [
-    { key: 'model_code', value: 'NCM-150Ah', type: 'string' },
-    { key: 'nominal_capacity', value: 150, unit: 'Ah', type: 'number' },
-    { key: 'nominal_voltage', value: 3.7, unit: 'V', type: 'number' },
-    { key: 'energy_density', value: 250, unit: 'Wh/kg', type: 'number' },
-    { key: 'cycle_life', value: 2000, unit: '次', type: 'number' },
-    { key: 'production_lead_time', value: 12, unit: '天', type: 'number' },
-  ], { metadata: { application: '电动汽车', certifications: 'UN38.3,GB38031' } }),
-
-  createEntity('process_route', '工艺路线', 'prod', '产品工艺域', 'git-branch', '制造工艺路线', [
-    { key: 'route_code', value: 'ROUTE-LFP-001', type: 'string' },
-    { key: 'version', value: 'V3.2', type: 'string' },
-    { key: 'process_count', value: 15, unit: '道', type: 'number' },
-    { key: 'total_ct', value: 480, unit: '秒', type: 'number' },
-    { key: 'yield_target', value: 98.5, unit: '%', type: 'number' },
-  ]),
-
-  createEntity('process_step', '工序', 'prod', '产品工艺域', 'activity', '工艺工序', [
-    { key: 'step_code', value: 'STEP-001', type: 'string' },
-    { key: 'step_name', value: '正极搅拌', type: 'string' },
-    { key: 'sequence', value: 1, unit: '序', type: 'number' },
-    { key: 'standard_time', value: 240, unit: '分钟', type: 'number' },
-    { key: 'is_quality_gate', value: true, type: 'boolean' },
-  ]),
-
-  createEntity('bom', '物料清单', 'prod', '产品工艺域', 'box', '产品BOM', [
-    { key: 'bom_code', value: 'BOM-LFP-280', type: 'string' },
-    { key: 'version', value: 'V2.1', type: 'string' },
-    { key: 'component_count', value: 28, unit: '种', type: 'number' },
-    { key: 'material_cost', value: 680, unit: '元/只', type: 'number' },
   ]),
 ];
 
-// ===== 4. 供应链域 (Supply) =====
-const supplyEntities: OntologyEntity[] = [
-  createEntity('supplier', '供应商', 'supply', '供应链域', 'truck', '物料供应商', [
-    { key: 'supplier_code', value: 'SUP-001', type: 'string' },
-    { key: 'supplier_name', value: '材料科技集团', type: 'string' },
-    { key: 'supplier_type', value: '战略', type: 'string' },
-    { key: 'supply_category', value: '正极材料', type: 'string' },
-    { key: 'monthly_capacity', value: 5000, unit: '吨', type: 'number' },
-    { key: 'lead_time', value: 15, unit: '天', type: 'number' },
-    { key: 'quality_rating', value: 'A', type: 'string' },
-  ]),
-
-  createEntity('material_category', '物料分类', 'supply', '供应链域', 'layers', '物料分类', [
-    { key: 'category_code', value: 'CAT-01', type: 'string' },
-    { key: 'category_name', value: '正极材料', type: 'string' },
-    { key: 'category_level', value: 1, unit: '级', type: 'number' },
-  ]),
-
-  createEntity('material', '物料', 'supply', '供应链域', 'box', '物料主数据', [
-    { key: 'material_code', value: 'RM-CATH-001', type: 'string' },
-    { key: 'material_name', value: '磷酸铁锂正极材料', type: 'string' },
-    { key: 'specification', value: 'LFP-STD', type: 'string' },
-    { key: 'unit', value: '吨', type: 'string' },
+// 供应链域（扩展后保留）
+const supplyLegacyEntities: OntologyEntity[] = [
+  createEntity('material_legacy', '物料主数据', 'supply', '供应链域', 'box', '物料主数据', [
+    { key: 'material_code', value: 'RM-001', type: 'string' },
     { key: 'safety_stock', value: 500, unit: '吨', type: 'number' },
     { key: 'shelf_life', value: 365, unit: '天', type: 'number' },
   ]),
@@ -801,17 +903,106 @@ const allEntities: OntologyEntity[] = [
   ...costEntities,
 ];
 
-// 构建域结构
+// 构建域结构 - 产销匹配场景4大业务域 + 支撑域
 const initialDomains: OntologyDomain[] = [
-  { id: 'dom-org', name: 'Organization', displayName: '组织资源域', icon: 'building', description: '企业组织架构、人员、班组、技能', entities: orgEntities },
-  { id: 'dom-cap', name: 'Capacity', displayName: '产能设备域', icon: 'cpu', description: '产线、工位、设备、模具', entities: capEntities },
-  { id: 'dom-prod', name: 'Product', displayName: '产品工艺域', icon: 'battery', description: '产品型号、BOM、工艺路线、工序', entities: prodEntities },
-  { id: 'dom-supply', name: 'SupplyChain', displayName: '供应链域', icon: 'truck', description: '供应商、物料、仓库、库位、库存', entities: supplyEntities },
-  { id: 'dom-mfg', name: 'Manufacturing', displayName: '生产执行域', icon: 'activity', description: '生产计划、工单、在制品', entities: mfgEntities },
-  { id: 'dom-quality', name: 'Quality', displayName: '质量管理域', icon: 'shield', description: '质量标准、检验记录、缺陷', entities: qualityEntities },
-  { id: 'dom-sales', name: 'Sales', displayName: '销售客户域', icon: 'file-code', description: '客户、销售订单、发货', entities: salesEntities },
-  { id: 'dom-project', name: 'Project', displayName: '项目管理域', icon: 'git-branch', description: '研发项目、试产、技改', entities: projectEntities },
-  { id: 'dom-cost', name: 'Cost', displayName: '成本财务域', icon: 'database', description: '成本中心、成本核算', entities: costEntities },
+  // ===== 核心4大业务域（产销匹配场景）=====
+  {
+    id: 'dom-demand',
+    name: 'Demand',
+    displayName: '需求域',
+    icon: 'target',
+    description: '谁要什么、要多少、什么时候要。包含：客户、客户订单、成品物料',
+    entities: demandEntities
+  },
+  {
+    id: 'dom-production',
+    name: 'Production',
+    displayName: '生产域',
+    icon: 'activity',
+    description: '用什么资源、怎么生产、当前状态如何。包含：工作中心、生产工单、工序',
+    entities: productionEntities
+  },
+  {
+    id: 'dom-supply',
+    name: 'SupplyChain',
+    displayName: '供应域',
+    icon: 'truck',
+    description: '物料从哪来、有多少、能用多少。包含：库存、BOM层级、供应商',
+    entities: [...supplyEntities, ...supplyLegacyEntities]
+  },
+  {
+    id: 'dom-planning',
+    name: 'Planning',
+    displayName: '计划域',
+    icon: 'git-branch',
+    description: '能在什么时候做完、怎么做最优。包含：工艺路线、交期承诺',
+    entities: planningEntities
+  },
+  // ===== 支撑域（向后兼容）=====
+  {
+    id: 'dom-org',
+    name: 'Organization',
+    displayName: '组织资源域',
+    icon: 'building',
+    description: '企业组织架构、制造基地、工厂',
+    entities: orgEntities
+  },
+  {
+    id: 'dom-cap',
+    name: 'Capacity',
+    displayName: '产能设备域',
+    icon: 'cpu',
+    description: '产线、工位、设备、模具',
+    entities: capEntities
+  },
+  {
+    id: 'dom-prod',
+    name: 'Product',
+    displayName: '产品工艺域',
+    icon: 'battery',
+    description: '产品型号、BOM、工艺路线、工序',
+    entities: prodEntities
+  },
+  {
+    id: 'dom-mfg',
+    name: 'Manufacturing',
+    displayName: '生产执行域',
+    icon: 'file-code',
+    description: '生产计划、工单、在制品',
+    entities: mfgEntities
+  },
+  {
+    id: 'dom-quality',
+    name: 'Quality',
+    displayName: '质量管理域',
+    icon: 'shield',
+    description: '质量标准、检验记录、缺陷',
+    entities: qualityEntities
+  },
+  {
+    id: 'dom-sales',
+    name: 'Sales',
+    displayName: '销售客户域',
+    icon: 'file-code',
+    description: '客户档案、销售订单',
+    entities: salesEntities
+  },
+  {
+    id: 'dom-project',
+    name: 'Project',
+    displayName: '项目管理域',
+    icon: 'git-branch',
+    description: '研发项目、试产、技改',
+    entities: projectEntities
+  },
+  {
+    id: 'dom-cost',
+    name: 'Cost',
+    displayName: '成本财务域',
+    icon: 'database',
+    description: '成本中心、成本核算',
+    entities: costEntities
+  },
 ];
 
 // ============================================================================
@@ -827,6 +1018,88 @@ const initialDomains: OntologyDomain[] = [
 // ============================================================================
 
 const initialLinks: OntologyLink[] = [
+  // ============================================================================
+  // 产销匹配场景 - 12种核心关系（按4大业务域分类）
+  // ============================================================================
+
+  // ==================== 需求域关系 ====================
+  // places: Customer → CustomerOrder (客户下达订单)
+  { id: 'r001', source: 'customer', target: 'customer_order', relation: 'places', relationType: 'causal', cardinality: '1:N', description: '客户下达订单', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['需求', '订单'] },
+  // orders: CustomerOrder → FinishedItem (订单指定产品)
+  { id: 'r002', source: 'customer_order', target: 'finished_item', relation: 'orders', relationType: 'reference', cardinality: 'N:1', description: '订单指定产品', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['需求', '产品'] },
+  // requires: CustomerOrder → Inventory (订单扣减库存)
+  { id: 'r003', source: 'customer_order', target: 'inventory', relation: 'requires', relationType: 'flow', cardinality: 'N:N', description: '订单扣减库存（MTS场景）', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['需求', '库存'] },
+
+  // ==================== 需求→生产关系 ====================
+  // triggers: CustomerOrder → ProductionOrder (订单触发工单)
+  { id: 'r004', source: 'customer_order', target: 'production_order', relation: 'triggers', relationType: 'causal', cardinality: '1:N', description: '订单触发生产工单（MTO场景）', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['触发', '生产'] },
+  // governed_by: CustomerOrder → Routing (订单遵循工艺路线)
+  { id: 'r005', source: 'customer_order', target: 'routing', relation: 'governed_by', relationType: 'reference', cardinality: 'N:1', description: '订单遵循工艺路线', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['遵循', '工艺'] },
+
+  // ==================== 生产域内部关系 ====================
+  // contains: ProductionOrder → Operation (工单包含工序)
+  { id: 'r006', source: 'production_order', target: 'operation', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '工单包含工序', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['包含', '工序'] },
+  // executed_at: Operation → WorkCenter (工序在工作中心执行)
+  { id: 'r007', source: 'operation', target: 'work_center', relation: 'executed_at', relationType: 'control', cardinality: 'N:1', description: '工序在工作中心执行', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['执行', '资源'] },
+  // precedes: Operation → Operation (工序先后依赖)
+  { id: 'r008', source: 'operation', target: 'operation', relation: 'precedes', relationType: 'temporal', cardinality: '1:N', description: '工序先后依赖关系', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['先后', '依赖'] },
+
+  // ==================== 供应域关系 ====================
+  // defined_by: FinishedItem → BOMLevel (成品由BOM层级定义)
+  { id: 'r009', source: 'finished_item', target: 'bom_level', relation: 'defined_by', relationType: 'structural', cardinality: '1:N', description: '成品由BOM层级定义', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['定义', 'BOM'] },
+  // sourced_from: BOMLevel → Supplier (物料从供应商采购)
+  { id: 'r010', source: 'bom_level', target: 'supplier', relation: 'sourced_from', relationType: 'flow', cardinality: 'N:1', description: '物料从供应商采购', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['采购', '供应'] },
+  // replenishes: Supplier → Inventory (供应商补充库存)
+  { id: 'r011', source: 'supplier', target: 'inventory', relation: 'replenishes', relationType: 'flow', cardinality: '1:N', description: '供应商补充库存', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['补充', '库存'] },
+
+  // ==================== 计划域关系 ====================
+  // generates: CustomerOrder → ATPCommitment (订单生成承诺)
+  { id: 'r012', source: 'customer_order', target: 'atp_commitment', relation: 'generates', relationType: 'causal', cardinality: '1:N', description: '订单生成承诺记录', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['承诺', 'ATP'] },
+
+  // ==================== 闭环补充关系 ====================
+  // produced_by: FinishedItem → Routing (成品由工艺路线生产)
+  { id: 'r013', source: 'finished_item', target: 'routing', relation: 'produced_by', relationType: 'reference', cardinality: 'N:1', description: '成品由工艺路线生产', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['生产', '工艺'] },
+  // stored_as: FinishedItem → Inventory (成品存储为库存)
+  { id: 'r014', source: 'finished_item', target: 'inventory', relation: 'stored_as', relationType: 'structural', cardinality: '1:N', description: '成品存储为库存', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['存储', '库存'] },
+  // sequences: Routing → Operation (工艺路线排序工序)
+  { id: 'r015', source: 'routing', target: 'operation', relation: 'sequences', relationType: 'temporal', cardinality: '1:N', description: '工艺路线排序工序', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['排序', '工序'] },
+  // constrains: ATPCommitment → ProductionOrder (承诺约束工单)
+  { id: 'r016', source: 'atp_commitment', target: 'production_order', relation: 'constrains', relationType: 'control', cardinality: '1:N', description: '交期承诺约束工单排程', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['约束', '排程'] },
+  // scheduled_for: WorkCenter → ProductionOrder (工作中心排程工单)
+  { id: 'r017', source: 'work_center', target: 'production_order', relation: 'scheduled_for', relationType: 'control', cardinality: '1:N', description: '工作中心排程生产工单', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['排程', '产能'] },
+  // produces: WorkCenter → ProductionRecord (工作中心产生产能记录)
+  { id: 'r018', source: 'work_center', target: 'production_record', relation: 'produces', relationType: 'causal', cardinality: '1:N', description: '工作中心产生产能记录', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['产出', '记录'] },
+  // issues_to: Inventory → ProductionOrder (库存发料给工单)
+  { id: 'r019', source: 'inventory', target: 'production_order', relation: 'issues_to', relationType: 'flow', cardinality: 'N:N', description: '库存物料发放给生产工单', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['发料', '物料'] },
+  // plans_for: BOMLevel → Inventory (BOM层级规划库存需求)
+  { id: 'r020', source: 'bom_level', target: 'inventory', relation: 'plans_for', relationType: 'reference', cardinality: 'N:N', description: 'BOM层级规划库存需求', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['规划', '需求'] },
+
+  // ==================== 支撑实体整合关系（新域模型）====================
+  // 生产计划驱动关系
+  { id: 'r021', source: 'production_plan', target: 'customer_order', relation: 'plans_for', relationType: 'control', cardinality: '1:N', description: '生产计划为订单排产', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['计划', '订单'] },
+  { id: 'r022', source: 'production_plan', target: 'work_center', relation: 'allocates', relationType: 'control', cardinality: '1:N', description: '生产计划分配工作中心产能', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['分配', '产能'] },
+  // 工单与工序关系
+  { id: 'r023', source: 'work_order', target: 'operation', relation: 'executes', relationType: 'control', cardinality: '1:N', description: '工单执行工序', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['执行', '工序'] },
+  { id: 'r024', source: 'operation', target: 'production_record', relation: 'creates', relationType: 'causal', cardinality: '1:N', description: '工序创建生产记录', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['创建', '记录'] },
+  // 完工入库关系
+  { id: 'r025', source: 'production_order', target: 'inventory', relation: 'replenishes', relationType: 'flow', cardinality: '1:N', description: '工单完工入库', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['入库', '完工'] },
+  { id: 'r026', source: 'work_order', target: 'inventory', relation: 'replenishes', relationType: 'flow', cardinality: '1:N', description: '工单完工入库', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['入库', '完工'] },
+  // 物料与BOM关系
+  { id: 'r027', source: 'material', target: 'bom_level', relation: 'composes', relationType: 'structural', cardinality: 'N:1', description: '物料组成BOM层级', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['组成', 'BOM'] },
+  { id: 'r028', source: 'finished_item', target: 'material', relation: 'transforms_from', relationType: 'flow', cardinality: '1:N', description: '成品由物料转化', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['转化', '物料'] },
+  // 仓储支撑关系
+  { id: 'r029', source: 'warehouse', target: 'inventory', relation: 'stores', relationType: 'structural', cardinality: '1:N', description: '仓库存储库存', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['存储', '仓库'] },
+  { id: 'r030', source: 'work_center', target: 'warehouse', relation: 'draws_from', relationType: 'flow', cardinality: 'N:1', description: '工作中心从仓库领料', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['领料', '仓库'] },
+  // 产能需求连接到工作中心（替代旧域workshop）
+  { id: 'r031', source: 'capacity_requirement', target: 'work_center', relation: 'demands', relationType: 'control', cardinality: 'N:1', description: '产能需求要求工作中心', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['需求', '产能'] },
+  // 组织支撑关系
+  { id: 'r032', source: 'base_cz', target: 'work_center', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含工作中心', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
+  { id: 'r033', source: 'base_cz', target: 'warehouse', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含仓库', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '设施'] },
+
+  // ============================================================================
+  // 原有关系定义（向后兼容）
+  // ============================================================================
+
   // ==================== 组织层级关系 (structural) ====================
   { id: 'l001', source: 'company', target: 'base_cz', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '公司包含基地', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
   { id: 'l002', source: 'base_cz', target: 'factory_a', relation: 'contains', relationType: 'structural', cardinality: '1:N', description: '基地包含工厂', properties: { strength: 'strong', direction: 'directed', temporality: 'persistent' }, semantics: ['层级', '组织'] },
@@ -902,6 +1175,10 @@ const initialLinks: OntologyLink[] = [
   { id: 'l508', source: 'defect', target: 'equipment', relation: 'caused_by', relationType: 'causal', cardinality: 'N:1', description: '缺陷由设备导致', properties: { strength: 'conditional', direction: 'directed', temporality: 'persistent' }, semantics: ['原因', '设备'] },
   { id: 'l509', source: 'quality_alert', target: 'defect', relation: 'triggered_by', relationType: 'causal', cardinality: '1:N', description: '预警由缺陷触发', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['触发', '预警'] },
   { id: 'l510', source: 'corrective_action', target: 'defect', relation: 'addresses', relationType: 'control', cardinality: '1:1', description: '纠正措施处理缺陷', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['处理', '纠正'] },
+  // 检验记录执行检查项（补充CheckItem下游关系）
+  { id: 'l511', source: 'iqc_record', target: 'check_item', relation: 'executes', relationType: 'control', cardinality: 'N:N', description: '来料检验执行检查项', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['执行', '检验'] },
+  { id: 'l512', source: 'ipqc_record', target: 'check_item', relation: 'monitors', relationType: 'control', cardinality: 'N:N', description: '过程检验监控检查项', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['监控', '检验'] },
+  { id: 'l513', source: 'oqc_record', target: 'check_item', relation: 'verifies', relationType: 'control', cardinality: 'N:N', description: '出货检验验证检查项', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['验证', '检验'] },
 
   // ==================== 销售关系 (flow + causal) ====================
   { id: 'l601', source: 'customer', target: 'sales_order', relation: 'places', relationType: 'flow', cardinality: '1:N', description: '客户下订单', properties: { strength: 'strong', direction: 'directed', temporality: 'transient' }, semantics: ['下单', '销售'] },
@@ -945,7 +1222,7 @@ const initialConstraints: Constraint[] = [
 // 节点卡片组件
 // ============================================================================
 
-const OntologyNodeCard: React.FC<{ data: OntologyEntity }> = ({ data }) => {
+const OntologyNodeCard: React.FC<{ data: OntologyEntity & { onShowDetail?: () => void } }> = ({ data }) => {
   return (
     <div className="ontology-node-palantir">
       <Handle type="target" position={Position.Left} style={{ left: -5, top: '50%', transform: 'translateY(-50%)', width: 8, height: 8, background: '#3b82f6', border: '1.5px solid #ffffff' }} />
@@ -965,6 +1242,17 @@ const OntologyNodeCard: React.FC<{ data: OntologyEntity }> = ({ data }) => {
         {data.icon === 'git-branch' && <GitBranch size={12} />}
         {data.icon === 'check-circle' && <div className="w-3 h-3 rounded-full bg-green-500" />}
         <span className="node-title">{data.displayName}</span>
+        {/* 右上角展开按钮 */}
+        <button
+          className="node-expand-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            data.onShowDetail?.();
+          }}
+          title="查看详情"
+        >
+          <PanelRightOpen size={12} />
+        </button>
       </div>
       <div className="ontology-node-content-palantir">
         <div className="domain-tag">{data.domainName}</div>
@@ -1327,7 +1615,15 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
       id: entity.id,
       type: 'ontologyNode',
       position: { x: 100 + (idx % 5) * 220, y: 100 + Math.floor(idx / 5) * 160 },
-      data: entity,
+      data: {
+        ...entity,
+        onShowDetail: () => {
+          setSelectedNodeId(entity.id);
+          setSelectedEntity(entity);
+          setFocusedNodeId(entity.id);
+          setFocusMode(true);
+        }
+      },
       style: focusMode && entity.id === focusedNodeId ? { boxShadow: '0 0 0 3px #3b82f6', zIndex: 100 } : {}
     }));
 
@@ -1357,12 +1653,12 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
     }
   }, [focusMode, focusedNodeId, selectedDomain, reactFlowInstance]);
 
-  // 处理节点选择
+  // 处理节点点击 - 仅用于聚焦，不打开详情面板
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedNodeId(node.id);
-    setSelectedEntity(node.data as OntologyEntity);
     setFocusedNodeId(node.id);
     setFocusMode(true);
+    // 注意：详情面板现在通过节点右上角的图标打开
   }, []);
 
   // 处理边选择
@@ -1596,17 +1892,19 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
         right: 0,
         top: 0,
         bottom: 0,
-        width: '450px',
-        minWidth: '450px',
-        maxWidth: '450px',
+        width: selectedEntity ? '450px' : '0px',
+        minWidth: selectedEntity ? '450px' : '0px',
+        maxWidth: selectedEntity ? '450px' : '0px',
         zIndex: 100,
-        boxShadow: '-4px 0 20px rgba(0,0,0,0.1)',
+        boxShadow: selectedEntity ? '-4px 0 20px rgba(0,0,0,0.1)' : 'none',
         background: '#ffffff',
-        borderLeft: '1px solid #e2e8f0',
+        borderLeft: selectedEntity ? '1px solid #e2e8f0' : 'none',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        overflow: 'hidden',
+        transition: 'all 0.3s ease'
       }}>
-        {selectedEntity ? (
+        {selectedEntity && (
           <>
             <div className="panel-header-palantir">
               <div className="header-title">
@@ -1619,11 +1917,17 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
                 <span>{selectedEntity.displayName}</span>
               </div>
               <div className="header-actions">
-                <button className="icon-btn" onClick={() => {
-                  setSelectedEntity(null);
-                  setSelectedNodeId(null);
-                  setFocusMode(false);
-                }}><X size={14} /></button>
+                <button
+                  className="icon-btn panel-close-btn"
+                  onClick={() => {
+                    setSelectedEntity(null);
+                    setSelectedNodeId(null);
+                    setFocusMode(false);
+                  }}
+                  title="收起面板"
+                >
+                  <PanelRightClose size={16} />
+                </button>
               </div>
             </div>
 
@@ -2536,11 +2840,6 @@ export default function OntologyStudio({ onNavigate }: { onNavigate: (page: stri
 
             </div>
           </>
-        ) : (
-          <div className="empty-state">
-            <Database size={48} className="empty-icon" />
-            <p>选择左侧实体查看详情</p>
-          </div>
         )}
       </div>
     </div>
