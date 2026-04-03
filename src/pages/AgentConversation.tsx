@@ -15,68 +15,35 @@ import {
   ChevronDown, BarChart3, Layers, Zap, Lightbulb, Save,
   MoreHorizontal, TrendingUp, Activity, Settings, ChevronLeft
 } from 'lucide-react';
+import type {
+  Message,
+  Attachment,
+  ReasoningTrace,
+  ReasoningStep,
+  MentionableAgent,
+  MentionableFile,
+  MentionableItem,
+  DiscoveredPattern,
+  Agent,
+  ChatHistory
+} from '../types/conversation';
 
 // ============================================================================
-// 简化类型定义
+// 类型再导出（保持文件内兼容性）
 // ============================================================================
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  attachments?: Attachment[];
-  reasoning?: ReasoningTrace;
-}
-
-interface Attachment {
-  id: string;
-  name: string;
-  rowCount: number;
-  columns: string[];
-  data?: any[];  // 可选的数据内容（演示数据用）
-}
-
-interface ReasoningTrace {
-  intent: string;
-  entities: string[];
-  skills: string[];
-  constraints: string[];
-  steps: ReasoningStep[];
-  result: {
-    summary: string;
-    confidence: number;
-    recommendations: string[];
-  };
-}
-
-interface ReasoningStep {
-  id: string;
-  name: string;
-  status: 'running' | 'completed' | 'error';
-  duration: number;
-  output?: string;
-}
-
-// 可@提及项类型
-interface MentionableAgent {
-  type: 'agent';
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  color: string;
-}
-
-interface MentionableFile {
-  type: 'file';
-  id: string;
-  name: string;
-  description: string;
-  rowCount: number;
-}
-
-type MentionableItem = MentionableAgent | MentionableFile;
+export type {
+  Message,
+  Attachment,
+  ReasoningTrace,
+  ReasoningStep,
+  MentionableAgent,
+  MentionableFile,
+  MentionableItem,
+  DiscoveredPattern,
+  Agent,
+  ChatHistory
+};
 
 // ============================================================================
 // 样式常量
@@ -136,32 +103,6 @@ const COLORS = {
   purple: '#8b5cf6',
   cyan: '#06b6d4',
 } as const;
-
-interface DiscoveredPattern {
-  id: string;
-  type: 'skill' | 'constraint' | 'entity';
-  name: string;
-  description: string;
-  confidence: number;
-}
-
-// 智能体定义
-interface Agent {
-  id: string;
-  name: string;
-  icon: string;
-  description: string;
-  color: string;
-}
-
-// 对话历史类型
-interface ChatHistory {
-  id: string;
-  title: string;
-  messages: Message[];
-  createdAt: string;
-  updatedAt: string;
-}
 
 // 可用智能体列表
 const AVAILABLE_AGENTS: Agent[] = [
