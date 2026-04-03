@@ -78,6 +78,65 @@ interface MentionableFile {
 
 type MentionableItem = MentionableAgent | MentionableFile;
 
+// ============================================================================
+// 样式常量
+// ============================================================================
+
+const STYLES = {
+  newChatButton: {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    padding: '10px 16px',
+    backgroundColor: '#3b82f6',
+    color: '#ffffff',
+    borderRadius: '8px',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 500
+  },
+  buttonContainer: {
+    position: 'relative' as const,
+    zIndex: 10
+  }
+};
+
+const COLORS = {
+  // 主色
+  primary: '#3b82f6',
+  primaryHover: '#2563eb',
+  primaryLight: 'rgba(59, 130, 246, 0.1)',
+  primaryBorder: 'rgba(59, 130, 246, 0.2)',
+
+  // 背景色
+  bgPrimary: '#f8fafc',
+  bgSecondary: '#ffffff',
+  bgTertiary: '#f1f5f9',
+  bgHover: 'rgba(241, 245, 249, 0.5)',
+
+  // 文字色
+  textPrimary: '#1e293b',
+  textSecondary: '#64748b',
+  textMuted: '#94a3b8',
+
+  // 边框色
+  borderDefault: '#e2e8f0',
+  borderHover: '#cbd5e1',
+
+  // 功能色
+  success: '#10b981',
+  successBg: 'rgba(16, 185, 129, 0.1)',
+  warning: '#f59e0b',
+  warningBg: 'rgba(245, 158, 11, 0.1)',
+  error: '#ef4444',
+  errorBg: 'rgba(239, 68, 68, 0.1)',
+  purple: '#8b5cf6',
+  cyan: '#06b6d4',
+} as const;
+
 interface DiscoveredPattern {
   id: string;
   type: 'skill' | 'constraint' | 'entity';
@@ -615,24 +674,10 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
         </div>
 
         {/* +新对话按钮 */}
-        <div className="p-3" style={{ position: 'relative', zIndex: 10 }}>
+        <div className="p-3" style={STYLES.buttonContainer}>
           <button
             onClick={() => createNewChat()}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              padding: '10px 16px',
-              backgroundColor: '#3b82f6',
-              color: '#ffffff',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 500
-            }}
+            style={STYLES.newChatButton}
           >
             <Plus size={16} />
             <span>新对话</span>
