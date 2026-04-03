@@ -8,7 +8,6 @@
  * 4. 知识沉淀轻量一键化
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { flushSync } from 'react-dom';
 import {
   Send, Upload, Bot, Brain, X, FileSpreadsheet, Database,
   GitBranch, Target, Cpu, Shield, CheckCircle, AlertCircle,
@@ -284,7 +283,6 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
   // 对话历史
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const [chatKey, setChatKey] = useState<number>(0); // 用于强制刷新消息列表
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -310,11 +308,6 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
   // 自动滚动
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // 调试：监听 messages 变化
-  useEffect(() => {
-    console.log('Messages updated:', messages.length, 'messages');
   }, [messages]);
 
   // 发送消息
@@ -463,30 +456,22 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
 
   // 创建新对话
   const createNewChat = useCallback(() => {
-    console.log('createNewChat called');
-
-    // 使用 flushSync 确保状态立即更新
-    flushSync(() => {
-      // 使用 ref 获取最新状态
+    // 保存当前对话到历史（如果有实际消息）
+    setChatHistory(prev => {
       const latestMessages = messagesRef.current;
       const latestChatId = currentChatIdRef.current;
 
-      console.log('Latest messages count:', latestMessages.length);
-
-      // 如果有实际消息，保存到历史
       if (latestMessages.length > 1) {
         const title = latestMessages[1]?.content?.slice(0, 20) || '新对话';
         const now = new Date().toISOString();
 
         if (latestChatId) {
-          // 更新现有对话
-          setChatHistory(prev => prev.map(c =>
+          return prev.map(c =>
             c.id === latestChatId
               ? { ...c, messages: [...latestMessages], updatedAt: now }
               : c
-          ));
+          );
         } else {
-          // 创建新的历史记录
           const newChat: ChatHistory = {
             id: `chat_${Date.now()}`,
             title,
@@ -494,35 +479,29 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
             createdAt: now,
             updatedAt: now
           };
-          setChatHistory(prev => [newChat, ...prev]);
+          return [newChat, ...prev];
         }
       }
-
-      // 创建新的欢迎消息
-      const welcomeMsg: Message = {
-        id: `welcome_${Date.now()}`,
-        role: 'assistant',
-        content: `欢迎使用智能推演助手！我可以帮您分析产能、优化排程、检测异常等。\n\n**我可以做什么：**\n• 产能预测 - 基于历史数据预测未来产能\n• 排程优化 - 智能安排生产计划\n• 异常检测 - 发现生产中的异常情况\n• 需求预测 - 预测市场需求趋势\n\n**开始使用：**\n1. 上传您的生产数据文件（CSV/Excel）\n2. 或直接输入您的问题\n3. 我会展示完整的推演逻辑路径`,
-        timestamp: new Date().toISOString(),
-        reasoning: MOCK_REASONING
-      };
-
-      // 强制更新 messages 为新的数组
-      setMessages([welcomeMsg]);
-
-      // 清空其他状态
-      setCurrentChatId(null);
-      setInputText('');
-      setUploadedFiles([]);
-      setSelectedAgents([]);
-      setSelectedMessage(null);
-      setShowReasoning(false);
-
-      // 强制刷新消息列表
-      setChatKey(prev => prev + 1);
+      return prev;
     });
 
-    console.log('New chat created');
+    // 创建新的欢迎消息
+    const welcomeMsg: Message = {
+      id: `welcome_${Date.now()}`,
+      role: 'assistant',
+      content: `欢迎使用智能推演助手！我可以帮您分析产能、优化排程、检测异常等。\n\n**我可以做什么：**\n• 产能预测 - 基于历史数据预测未来产能\n• 排程优化 - 智能安排生产计划\n• 异常检测 - 发现生产中的异常情况\n• 需求预测 - 预测市场需求趋势\n\n**开始使用：**\n1. 上传您的生产数据文件（CSV/Excel）\n2. 或直接输入您的问题\n3. 我会展示完整的推演逻辑路径`,
+      timestamp: new Date().toISOString(),
+      reasoning: MOCK_REASONING
+    };
+
+    // 清空当前对话状态
+    setMessages([welcomeMsg]);
+    setCurrentChatId(null);
+    setInputText('');
+    setUploadedFiles([]);
+    setSelectedAgents([]);
+    setSelectedMessage(null);
+    setShowReasoning(false);
   }, []);
 
   // 加载历史对话
@@ -791,9 +770,7 @@ export default function AgentConversation({ onNavigate }: AgentConversationProps
         </div>
 
         {/* 消息列表 */}
-        <div key={chatKey} className="flex-1 overflow-auto p-4 space-y-4">
-          {/* 调试信息 */}
-          <div className="text-[10px] text-[#94a3b8] mb-2">Debug: {messages.length} messages, Key: {chatKey}</div>
+        <div className="flex-1 overflow-auto p-4 space-y-4">
           {messages.length === 0 ? (
             <EmptyState onUpload={() => fileInputRef.current?.click()} onDemo={loadDemoData} />
           ) : (
